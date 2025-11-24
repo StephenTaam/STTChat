@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>注册 - 安全聊天</title>
+<style>
+  body { font-family: sans-serif; max-width: 700px; margin: 40px auto; line-height: 1.6; }
+  label { display: block; margin-top: 16px; font-weight: bold; }
+  input {
+    width: 100%; padding: 10px; margin-top: 6px;
+    box-sizing: border-box; font-size: 15px;
+  }
+  button { margin-top: 20px; padding: 10px 16px; font-size: 15px; }
+
+  .error { color: #c00; font-weight: bold; }
+  .success { color: #090; font-weight: bold; }
+
+  .pw-wrapper { position: relative; }
+  .toggle-eye {
+    position: absolute; right: 12px; top: 10px;
+    cursor: pointer; color: #666; user-select: none;
+    font-size: 18px;
+  }
+
+  #pwRules li { margin: 2px 0; }
+  #pwStrength { font-weight: bold; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<h1>注册账号</h1>
+
+<form id="registerForm">
+  <!-- 用户名 -->
+  <label>
+    用户名
+    <input type="text" id="username" required autocomplete="username">
+  </label>
+
+  <!-- 密码 -->
+  <label>
+    密码
+    <div class="pw-wrapper">
+      <input type="password" id="password" required autocomplete="new-password">
+      <span id="togglePw" class="toggle-eye">👁</span>
+    </div>
+    <small>至少 <b>16 位</b>，且包含大写、小写、数字、符号。</small>
+
+    <ul id="pwRules" style="margin-top:6px; padding-left:20px; font-size:14px; color:#444;">
+      <li id="rule-length">❌ 长度至少 16 位</li>
+      <li id="rule-lower">❌ 需要小写字母</li>
+      <li id="rule-upper">❌ 需要大写字母</li>
+      <li id="rule-digit">❌ 需要数字</li>
+      <li id="rule-symbol">❌ 需要符号</li>
+    </ul>
+
+    <div id="pwStrength"></div>
+  </label>
+
+  <!-- 确认密码 -->
+  <label>
+    确认密码
+    <div class="pw-wrapper">
+      <input type="password" id="passwordConfirm" required autocomplete="new-password">
+      <span id="togglePw2" class="toggle-eye">👁</span>
+    </div>
+  </label>
+
+  <button type="submit">注册</button>
+</form>
+
+<p id="status"></p>
+
+<script>
+/* -----------------------------------------------------
+   基础设置
+----------------------------------------------------- */
+
+const MIN_PASSWORD_LENGTH = 16;
+const PBKDF2_ITER_KEY = 200000;     // 用于加密私钥
+const PBKDF2_ITER_PWHASH = 200000;  // 用于密码哈希
+
+// 你的服务器接口（记得改）
+const API_URL = "https://YOUR_SERVER_IP:YOUR_PORT/register";
+
+const textEncoder = new TextEncoder();
+
+/* -----------------------------------------------------
+   工具函数
+----------------------------------------------------- */
+
+function setStatus(msg, isErr=false){
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  el.className = isErr ? "error" : "success";
+}
+
+function strToUint8(s){ return textEncoder.encode(s); }
+
+function bufToBase64(buf){
+  const bytes = new Uint8Array(buf);
+  let bin = "";
+  for (let b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+function getRandomBytes(n){
+  const arr = new Uint8Array(n);
+  crypto.getRandomValues(arr);
+  return arr;
+}
+
+/* -----------------------------------------------------
+   密码强度 + 合规验证
+----------------------------------------------------- */
+
+function updatePasswordIndicators(pw) {
+  const ruleLength = document.getElementById("rule-length");
+  const ruleLower = document.getElementById("rule-lower");
+  const ruleUpper = document.getElementById("rule-upper");
+  const ruleDigit = document.getElementById("rule-digit");
+  const ruleSymbol = document.getElementById("rule-symbol");
+
+  const hasLower = /[a-z]/.test(pw);
+  const hasUpper = /[A-Z]/.test(pw);
+  const hasDigit = /[0-9]/.test(pw);
+  const hasSymbol = /[^\w\s]/.test(pw);
+  const longEnough = pw.length >= MIN_PASSWORD_LENGTH;
+
+  // 更新每项
+  ruleLength.textContent = (longEnough ? "✔" : "❌") + " 长度至少 16 位";
+  ruleLength.style.color = longEnough ? "#090" : "#c00";
+
+  ruleLower.textContent = (hasLower ? "✔" : "❌") + " 需要小写字母";
+  ruleLower.style.color = hasLower ? "#090" : "#c00";
+
+  ruleUpper.textContent = (hasUpper ? "✔" : "❌") + " 需要大写字母";
+  ruleUpper.style.color = hasUpper ? "#090" : "#c00";
+
+  ruleDigit.textContent = (hasDigit ? "✔" : "❌") + " 需要数字";
+  ruleDigit.style.color = hasDigit ? "#090" : "#c00";
+
+  ruleSymbol.textContent = (hasSymbol ? "✔" : "❌") + " 需要符号";
+  ruleSymbol.style.color = hasSymbol ? "#090" : "#c00";
+
+  // 计算强度
+  let score = 0;
+  if (longEnough) score++;
+  if (hasLower) score++;
+  if (hasUpper) score++;
+  if (hasDigit) score++;
+  if (hasSymbol) score++;
+
+  const strength = document.getElementById("pwStrength");
+  const levels = ["极弱", "弱", "一般", "强", "非常强"];
+  const colors = ["#c00", "#f60", "#cc0", "#6c0", "#090"];
+
+  strength.textContent = "密码强度：" + levels[Math.min(score,4)];
+  strength.style.color  = colors[Math.min(score,4)];
+}
+
+document.getElementById("password").addEventListener("input", e=>{
+  updatePasswordIndicators(e.target.value);
+});
+
+/* 提交前校验 */
+function validatePassword(pw){
+  if (pw.length < MIN_PASSWORD_LENGTH) return "密码至少 16 位";
+  if (!/[a-z]/.test(pw)) return "缺小写字母";
+  if (!/[A-Z]/.test(pw)) return "缺大写字母";
+  if (!/[0-9]/.test(pw)) return "缺数字";
+  if (!/[^\w\s]/.test(pw)) return "缺符号";
+  return null;
+}
+
+/* -----------------------------------------------------
+   密码可视切换（眼睛）
+----------------------------------------------------- */
+
+function setupEyeToggle(inputId, eyeId){
+  const input = document.getElementById(inputId);
+  const eye = document.getElementById(eyeId);
+  eye.addEventListener("click", ()=>{
+    input.type = (input.type === "password" ? "text" : "password");
+  });
+}
+setupEyeToggle("password", "togglePw");
+setupEyeToggle("passwordConfirm", "togglePw2");
+
+/* -----------------------------------------------------
+   WebCrypto：密钥生成、KDF、加密
+----------------------------------------------------- */
+
+// ECC 密钥对
+async function generateEcKeyPair(){
+  return await crypto.subtle.generateKey(
+    { name:"ECDH", namedCurve:"P-256" },
+    true,
+    ["deriveBits", "deriveKey"]
+  );
+}
+
+// KDF #1：密码 → AES 密钥（加密私钥）
+async function deriveAesKey(password, salt){
+  const baseKey = await crypto.subtle.importKey(
+    "raw", strToUint8(password),
+    { name:"PBKDF2" }, false,
+    ["deriveKey"]
+  );
+
+  return await crypto.subtle.deriveKey(
+    {
+      name:"PBKDF2",
+      salt,
+      iterations: PBKDF2_ITER_KEY,
+      hash:"SHA-256"
+    },
+    baseKey,
+    { name:"AES-GCM", length:256 },
+    false,
+    ["encrypt","decrypt"]
+  );
+}
+
+// 加密私钥
+async function encryptPrivateKey(aesKey, pkBytes){
+  const iv = getRandomBytes(12);
+  const ciphertext = await crypto.subtle.encrypt(
+    { name:"AES-GCM", iv },
+    aesKey,
+    pkBytes
+  );
+  return { iv, ciphertext };
+}
+
+// KDF #2：密码 → 密码哈希（发给服务器）
+async function derivePasswordHash(password, salt){
+  const baseKey = await crypto.subtle.importKey(
+    "raw", strToUint8(password),
+    { name:"PBKDF2" }, false,
+    ["deriveBits"]
+  );
+
+  return new Uint8Array(
+    await crypto.subtle.deriveBits(
+      {
+        name:"PBKDF2",
+        salt,
+        iterations: PBKDF2_ITER_PWHASH,
+        hash:"SHA-256"
+      },
+      baseKey,
+      256
+    )
+  );
+}
+
+/* -----------------------------------------------------
+   表单提交：最终注册逻辑
+----------------------------------------------------- */
+
+document.getElementById("registerForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  setStatus("");
+
+  const username = document.getElementById("username").value.trim();
+  const pw       = document.getElementById("password").value;
+  const pw2      = document.getElementById("passwordConfirm").value;
+
+  if (!username) return setStatus("用户名不能为空", true);
+  if (pw !== pw2) return setStatus("两次密码不一致", true);
+
+  const err = validatePassword(pw);
+  if (err) return setStatus("密码不合规：" + err, true);
+
+  try {
+    setStatus("生成密钥对中...");
+
+    // 1. ECC 密钥对
+    const kp = await generateEcKeyPair();
+    const spki  = await crypto.subtle.exportKey("spki", kp.publicKey);
+    const pkcs8 = await crypto.subtle.exportKey("pkcs8", kp.privateKey);
+
+    // 2. 用密码派生 AES 密钥，加密私钥
+    const saltKey = getRandomBytes(16);
+    const aesKey = await deriveAesKey(pw, saltKey);
+    const enc = await encryptPrivateKey(aesKey, pkcs8);
+
+    // 3. 密码哈希（仅发哈希）
+    const saltPw = getRandomBytes(16);
+    const pwHash = await derivePasswordHash(pw, saltPw);
+
+    // 4. 构造注册包
+    const payload = {
+      username,
+
+      passwordHash:{
+        kdf:"PBKDF2-HMAC-SHA256",
+        iterations: PBKDF2_ITER_PWHASH,
+        salt: bufToBase64(saltPw),
+        hash: bufToBase64(pwHash.buffer)
+      },
+
+      publicKey:{
+        alg:"ECDH",
+        curve:"P-256",
+        spki: bufToBase64(spki)
+      },
+
+      encryptedPrivateKey:{
+        kdf:"PBKDF2-HMAC-SHA256",
+        iterations: PBKDF2_ITER_KEY,
+        salt: bufToBase64(saltKey),
+        cipher:"AES-256-GCM",
+        iv: bufToBase64(enc.iv),
+        ciphertext: bufToBase64(enc.ciphertext)
+      }
+    };
+
+    setStatus("发送注册请求中...");
+
+    const resp = await fetch(API_URL, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    let result;
+    try { result = await resp.json(); }
+    catch { return setStatus("服务器返回不是 JSON", true); }
+
+    if (result.success) setStatus("注册成功！");
+    else setStatus("注册失败：" + (result.error || "未知原因"), true);
+
+  } catch(err){
+    console.error(err);
+    setStatus("注册出错：" + err.message, true);
+  }
+});
+</script>
+
+</body>
+</html>
+
