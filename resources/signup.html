@@ -36,6 +36,9 @@
   <label>
     用户名
     <input type="text" id="username" required autocomplete="username">
+    <small id="usernameHint" style="display:block; margin-top:4px;">
+    最多 64 个字符
+    </small>
   </label>
 
   <!-- 密码 -->
@@ -269,6 +272,8 @@ document.getElementById("registerForm").addEventListener("submit", async (e)=>{
   const pw2      = document.getElementById("passwordConfirm").value;
 
   if (!username) return setStatus("用户名不能为空", true);
+  if (username.length > USERNAME_MAX_LEN)
+    return setStatus("用户名不能超过 64 个字符", true);
   if (pw !== pw2) return setStatus("两次密码不一致", true);
 
   const err = validatePassword(pw);
@@ -338,6 +343,25 @@ document.getElementById("registerForm").addEventListener("submit", async (e)=>{
     setStatus("注册出错：" + err.message, true);
   }
 });
+  const USERNAME_MAX_LEN = 64;
+
+const usernameInput = document.getElementById("username");
+const usernameHint  = document.getElementById("usernameHint");
+
+usernameInput.addEventListener("input", () => {
+  const len = usernameInput.value.length;
+
+  if (len > USERNAME_MAX_LEN) {
+    usernameHint.textContent = `已输入 ${len} / ${USERNAME_MAX_LEN}（超出）`;
+    usernameHint.style.color = "#c00";
+    usernameInput.style.borderColor = "#c00";
+  } else {
+    usernameHint.textContent = `已输入 ${len} / ${USERNAME_MAX_LEN}`;
+    usernameHint.style.color = "#666";
+    usernameInput.style.borderColor = "";
+  }
+});
+
 </script>
 
 </body>
