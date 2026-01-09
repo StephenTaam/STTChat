@@ -79,7 +79,7 @@
 /* -----------------------------------------------------
    基础设置
 ----------------------------------------------------- */
-
+const USERNAME_MAX_LEN = 64;
 const MIN_PASSWORD_LENGTH = 16;
 const PBKDF2_ITER_KEY = 200000;     // 用于加密私钥
 const PBKDF2_ITER_PWHASH = 200000;  // 用于密码哈希
@@ -343,7 +343,7 @@ document.getElementById("registerForm").addEventListener("submit", async (e)=>{
     setStatus("注册出错：" + err.message, true);
   }
 });
-  const USERNAME_MAX_LEN = 64;
+  
 
 const usernameInput = document.getElementById("username");
 const usernameHint  = document.getElementById("usernameHint");
