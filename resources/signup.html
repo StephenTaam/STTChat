@@ -5,12 +5,33 @@
 <title>注册 - 安全聊天</title>
 <link rel="icon" type="image/png" href="../imags/favicon.png">
 <style>
-  body { font-family: sans-serif; max-width: 700px; margin: 40px auto; line-height: 1.6; }
-  label { display: block; margin-top: 16px; font-weight: bold; }
-  input {
-    width: 100%; padding: 10px; margin-top: 6px;
-    box-sizing: border-box; font-size: 15px;
-  }
+  body {
+  font-family: sans-serif;
+  max-width: 700px;
+  margin: 24px auto;
+  padding: 0 12px;   /* 关键 */
+  line-height: 1.5;
+}
+
+  label {
+  display: block;
+  margin-top: 12px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+input {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+small {
+  font-size: 12px;
+  color: #666;
+}
+
   button { margin-top: 20px; padding: 10px 16px; font-size: 15px; }
 
   .error { color: #c00; font-weight: bold; }
@@ -23,9 +44,43 @@
     font-size: 18px;
   }
 
-  #pwRules li { margin: 2px 0; }
+  #pwRules {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  font-size: 12px;
+  padding-left: 16px;
+}
+
   #pwStrength { font-weight: bold; margin-top: 6px; }
+  @media (max-width: 480px) {
+  h1 {
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+
+  button {
+    width: 100%;
+    font-size: 16px;
+    padding: 10px;
+  }
+
+  .toggle-eye {
+    top: 8px;
+    font-size: 16px;
+  }
+
+  #pwStrength {
+    font-size: 13px;
+  }
+
+  #pwRules {
+    grid-template-columns: 1fr;
+  }
+}
+
 </style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body>
 
