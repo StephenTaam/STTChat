@@ -1,12 +1,752 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-  <title>STTChat</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>STTChat</title>
 <link rel="icon" type="image/png" href="imags/favicon.png">
+
+<style>
+  body{
+    font-family: sans-serif;
+    max-width: 860px;
+    margin: 24px auto;
+    padding: 0 12px;
+    line-height: 1.5;
+  }
+  h1{ margin: 0 0 12px; }
+  .row{
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: 18px;
+    align-items: start;
+  }
+  @media (max-width: 720px){
+    .row{ grid-template-columns: 1fr; }
+  }
+
+  label{
+    display:block;
+    margin-top: 12px;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  input{
+    width: 100%;
+    padding: 9px;
+    margin-top: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+  small{ font-size: 12px; color:#666; display:block; margin-top:6px; }
+
+  button{
+    margin-top: 16px;
+    padding: 10px 16px;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .btn-wide{
+    width: 100%;
+  }
+
+  .card{
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 12px;
+  }
+  .muted{ color:#666; font-size: 12px; }
+  .error{ color:#c00; font-weight:bold; }
+  .success{ color:#090; font-weight:bold; }
+
+  .pw-wrapper{ position: relative; }
+  .toggle-eye{
+    position:absolute;
+    right: 12px;
+    top: 36px;
+    cursor:pointer;
+    user-select:none;
+    color:#666;
+    font-size: 18px;
+  }
+  @media (max-width: 480px){
+    .toggle-eye{ top: 34px; font-size: 16px; }
+    button{ width:100%; font-size:16px; padding:10px; }
+  }
+
+  a{ color:#0b62d6; text-decoration: none; }
+  a:hover{ text-decoration: underline; }
+
+  /* 视图切换 */
+  .hidden{ display:none; }
+
+  /* 首页 */
+  .topbar{
+    display:flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .pill{
+    display:inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid #ddd;
+    font-size: 12px;
+    color:#444;
+  }
+</style>
 </head>
-  <body>
-    <p>hi</p>
-    <a href="resources/signup.html">注册</a>
-  </body>
+
+<body>
+
+<!-- ========== 登录视图 ========== -->
+<div id="viewLogin">
+  <h1>登录</h1>
+
+  <div class="row">
+    <div class="card">
+      <form id="loginForm">
+        <label>
+          用户名
+          <input id="username" type="text" required autocomplete="username" />
+        </label>
+
+        <label>
+          密码
+          <div class="pw-wrapper">
+            <input id="password" type="password" required autocomplete="current-password" />
+            <span id="togglePw" class="toggle-eye">👁</span>
+          </div>
+          <small class="muted"></small>
+        </label>
+
+        <button class="btn-wide" type="submit">登录</button>
+
+        <p id="status" class="muted"></p>
+      </form>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div>
+          <div class="muted">连接状态</div>
+          <div id="wsState" class="pill">未连接</div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <a id="linkRegister" href="resources/signup.html">注册账号</a>
+        </div>
+
+        <div class="muted">
+          打开页面会自动建立 wss 连接；退出会断开并重新建立新连接。
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 主页视图 ========== -->
+<div id="viewHome" class="hidden">
+  <div class="topbar">
+    <h1 style="margin:0;">主页</h1>
+    <button id="btnLogout">退出</button>
+  </div>
+  <img id="avatarImg"
+     style="width:64px;height:64px;border-radius:50%;border:1px solid #ddd;">
+
+
+  <input type="file" id="avatarFile" accept="image/*">
+  <button id="btnUploadAvatar">修改头像</button>
+
+  <div class="card">
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <span class="pill" id="homeUser">用户：-</span>
+      <span class="pill" id="homeWs">WS：-</span>
+      <span class="pill" id="homeKey">私钥：-</span>
+    </div>
+
+    <div style="margin-top:12px;">
+      <div class="muted">
+        说明：私钥只在内存里（变量里）保存；退出会清空并断开 WS。
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================
+   配置：你需要改这里
+===================================================== */
+const HTTP_BASE = "https://42.51.13.120:8080"; // ← 你的 HTTP 服务 IP + 端口
+const WS_URL = "wss://42.51.13.120:5050";     // ✅ 改成你的 wss 地址
+const REGISTER_URL = "./signup.html";            // ✅ 改成你的注册页
+const FORGOT_URL   = "./forgot.html";            // ✅ 改成你的忘记密码页
+
+/* =====================================================
+   密码学参数（跟注册页保持一致 / 或按你服务器定）
+===================================================== */
+const PBKDF2_ITER_PWHASH = 200000;   // 登录密码哈希
+const PBKDF2_ITER_KEY_DEFAULT = 200000; // 若服务器没返回 iterations，就用这个
+const textEncoder = new TextEncoder();
+
+/* =====================================================
+   全局状态（只放内存）
+===================================================== */
+let reconnectTimer = null;
+let reconnectDelay = 3000; // 3 秒
+
+let ws = null;
+let wsReady = false;
+
+let session = {
+  username: null,
+  avatarUrl : null,
+  httpToken : null,
+
+  // 解密出的私钥（只在内存）
+  privateKeyPkcs8Bytes: null,  // Uint8Array
+  privateKeyCryptoKey: null,   // CryptoKey（可选）
+  publicKeySpkiBytes: null,    // Uint8Array（可选）
+
+  // 你也可以放一些“已登录标识”等
+};
+
+/* =====================================================
+   小工具
+===================================================== */
+function setStatus(msg, isErr=false){
+  const el = document.getElementById("status");
+  el.textContent = msg;
+  el.className = isErr ? "error" : (msg ? "muted" : "muted");
+  if(!msg) el.className = "muted";
+}
+function setWsState(text){
+  const el = document.getElementById("wsState");
+  el.textContent = text;
+}
+function strToUint8(s){ return textEncoder.encode(s); }
+
+function base64ToBytes(b64){
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+function bufToBase64(buf){
+  const bytes = buf instanceof ArrayBuffer ? new Uint8Array(buf) : new Uint8Array(buf.buffer || buf);
+  let bin = "";
+  for (let b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+function getRandomBytes(n){
+  const arr = new Uint8Array(n);
+  crypto.getRandomValues(arr);
+  return arr;
+}
+
+/* =====================================================
+   UI：眼睛切换
+===================================================== */
+(function setupEye(){
+  const input = document.getElementById("password");
+  const eye = document.getElementById("togglePw");
+  eye.addEventListener("click", ()=> {
+    input.type = (input.type === "password" ? "text" : "password");
+  });
+})();
+
+/* =====================================================
+   链接
+===================================================== */
+document.getElementById("linkRegister").addEventListener("click", (e)=>{
+  e.preventDefault();
+  location.href = REGISTER_URL;
+});
+document.getElementById("linkForgot").addEventListener("click", (e)=>{
+  e.preventDefault();
+  location.href = FORGOT_URL;
+});
+
+/* =====================================================
+   WebCrypto：PBKDF2 派生 passwordHash
+   ⚠️ 登录必须用“服务器给的 salt”，否则每次随机 salt 会导致 hash 永远不同
+===================================================== */
+async function derivePasswordHash(password, saltBytes, iterations){
+  const baseKey = await crypto.subtle.importKey(
+    "raw",
+    strToUint8(password),
+    { name:"PBKDF2" },
+    false,
+    ["deriveBits"]
+  );
+
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name:"PBKDF2",
+      salt: saltBytes,
+      iterations,
+      hash:"SHA-256"
+    },
+    baseKey,
+    256
+  );
+
+  return new Uint8Array(bits); // 32 bytes
+}
+
+/* =====================================================
+   WebCrypto：密码 → AES-256-GCM key（解密私钥）
+===================================================== */
+async function deriveAesKeyForPrivateKey(password, saltBytes, iterations){
+  const baseKey = await crypto.subtle.importKey(
+    "raw",
+    strToUint8(password),
+    { name:"PBKDF2" },
+    false,
+    ["deriveKey"]
+  );
+
+  return await crypto.subtle.deriveKey(
+    {
+      name:"PBKDF2",
+      salt: saltBytes,
+      iterations,
+      hash:"SHA-256"
+    },
+    baseKey,
+    { name:"AES-GCM", length:256 },
+    false,
+    ["decrypt"]
+  );
+}
+
+async function decryptPrivateKey(aesKey, ivBytes, ciphertextBytes){
+  const pkcs8 = await crypto.subtle.decrypt(
+    { name:"AES-GCM", iv: ivBytes },
+    aesKey,
+    ciphertextBytes
+  );
+  return new Uint8Array(pkcs8);
+}
+
+/* 可选：把 pkcs8 私钥 bytes 导入成 CryptoKey（比如后续做 ECDH / 签名等） */
+async function importPrivateKeyPkcs8(pkcs8Bytes){
+  // 你注册用的是 ECDH P-256（注意：WebCrypto 的 ECDH 私钥用途只能 deriveKey/deriveBits）
+  return await crypto.subtle.importKey(
+    "pkcs8",
+    pkcs8Bytes,
+    { name:"ECDH", namedCurve:"P-256" },
+    false,
+    ["deriveBits","deriveKey"]
+  );
+}
+
+/* =====================================================
+   WebSocket：连接 / 重连
+===================================================== */
+function connectWS(){
+  // 防止重复连接
+  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
+
+  wsReady = false;
+  setWsState("连接中…");
+
+  const currentWS = new WebSocket(WS_URL);
+  ws = currentWS;
+
+  currentWS.onopen = () => {
+    // 防止旧 ws 影响新 ws
+    if (ws !== currentWS) return;
+
+    wsReady = true;
+    setWsState("已连接");
+    updateHomeBadges();
+
+    // 成功连接，清重连状态
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    reconnectDelay = 3000;
+  };
+
+  currentWS.onclose = () => {
+    // ⭐ 关键：只处理“当前 ws”的 close
+    if (ws !== currentWS) return;
+
+    wsReady = false;
+    ws = null;
+
+    setWsState("已断开");
+    updateHomeBadges();
+
+    // 如果已登录，强制回登录页
+    if (session.username) {
+      session.username = null;
+
+      if (session.privateKeyPkcs8Bytes) {
+        session.privateKeyPkcs8Bytes.fill(0);
+      }
+      session.privateKeyPkcs8Bytes = null;
+      session.privateKeyCryptoKey = null;
+      session.publicKeySpkiBytes = null;
+
+      pendingLogin = null;
+
+      backToLogin();
+      setStatus("连接已断开，请重新登录", true);
+    }
+
+    // 防止重复定时器
+    if (reconnectTimer) return;
+
+    setWsState("断开，重连中…");
+
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      connectWS();
+      reconnectDelay = Math.min(reconnectDelay * 1.5, 30000);
+    }, reconnectDelay);
+  };
+
+  currentWS.onerror = () => {
+    // 统一由 onclose 处理
+  };
+
+  currentWS.onmessage = async (ev) => {
+    // 防止旧 ws 收到消息
+    if (ws !== currentWS) return;
+
+    let msg;
+    try {
+      msg = JSON.parse(ev.data);
+    } catch {
+      return;
+    }
+
+    if (msg.type === "login_challenge") {
+      await handleLoginChallenge(msg);
+      return;
+    }
+
+    if (msg.type === "login_result") {
+      await handleLoginResult(msg);
+      return;
+    }
+
+    // 其他消息
+  };
+}
+
+
+
+function closeWS(){
+  if (ws) {
+    try {
+      ws.close(1000, "logout");
+    } catch {}
+  }
+  ws = null;
+  wsReady = false;
+}
+
+
+
+/* =====================================================
+   登录协议（推荐的两步）
+   Step1: client -> server: {type:"login_start", username}
+   Step2: server -> client: {type:"login_challenge", salt, iterations}
+   Step3: client -> server: {type:"login", username, passwordHash:{...}}
+   Step4: server -> client: {type:"login_result", success, publicKey, encryptedPrivateKey, ...}
+===================================================== */
+
+let pendingLogin = null; // {username, password} 临时放一下（只在挑战期间用）
+
+async function sendJson(obj){
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    setStatus("WebSocket 未连接，正在连接…", true);
+    connectWS();
+    return false;
+  }
+  ws.send(JSON.stringify(obj));
+  return true;
+}
+
+
+async function startLogin(username, password){
+  // 把密码暂存到 pendingLogin，只用一次：用于算 hash、解密私钥
+  pendingLogin = { username, password };
+
+  // 发起挑战：让服务器给 salt（必须）
+  const ok = await sendJson({
+    type: "login_start",
+    username
+  });
+  if(ok) setStatus("请求登录参数中…");
+}
+
+async function handleLoginChallenge(msg){
+  if(!pendingLogin) return;
+
+  const { username, password } = pendingLogin;
+
+  // ✅ 兼容两种结构：
+  // 1) {salt, iterations}
+  // 2) {passwordHash:{salt, iterations}}
+  const saltB64 = msg?.salt ?? msg?.passwordHash?.salt;
+  const iterations = Number(msg?.iterations ?? msg?.passwordHash?.iterations ?? PBKDF2_ITER_PWHASH);
+
+  if(!saltB64){
+    setStatus("服务器未返回 salt，无法登录", true);
+    pendingLogin = null;
+    return;
+  }
+
+  const saltBytes = base64ToBytes(saltB64);
+
+  setStatus("计算密码哈希中…");
+  const pwHashBytes = await derivePasswordHash(password, saltBytes, iterations);
+
+  await sendJson({
+    type:"login",
+    username,
+    passwordHash:{
+      kdf:"PBKDF2-HMAC-SHA256",
+      iterations,
+      salt: saltB64,
+      hash: bufToBase64(pwHashBytes)
+    }
+  });
+
+  setStatus("发送登录请求中…");
+}
+
+
+async function handleLoginResult(msg){
+
+  // msg 推荐结构：
+  // {
+  //   type:"login_result",
+  //   success:true/false,
+  //   error:"...",
+  //   publicKey:{alg:"ECDH",curve:"P-256",spki:"base64"},
+  //   encryptedPrivateKey:{kdf:"PBKDF2-HMAC-SHA256",iterations:200000,salt:"base64",cipher:"AES-256-GCM",iv:"base64",ciphertext:"base64"}
+  // }
+  if(!pendingLogin){
+    // 也可能是“重复登录”等情况；按你需求处理
+  }
+
+  if(!msg.success){
+    setStatus("登录失败：" + (msg.error || "未知原因"), true);
+    pendingLogin = null;
+    return;
+  }
+
+  if(!pendingLogin){
+    setStatus("登录成功，但本地缺少待处理密码上下文（pendingLogin）", true);
+    return;
+  }
+
+  const { username, password } = pendingLogin;
+
+  // 校验返回字段
+  if(!msg.encryptedPrivateKey || !msg.encryptedPrivateKey.salt || !msg.encryptedPrivateKey.iv || !msg.encryptedPrivateKey.ciphertext){
+    setStatus("登录成功，但服务器未返回加密私钥字段", true);
+    pendingLogin = null;
+    return;
+  }
+
+  setStatus("解密私钥中…");
+
+  const epk = msg.encryptedPrivateKey;
+  const iterKey = Number(epk.iterations || PBKDF2_ITER_KEY_DEFAULT);
+  const saltKeyBytes = base64ToBytes(epk.salt);
+  const ivBytes = base64ToBytes(epk.iv);
+  const ciphertextBytes = base64ToBytes(epk.ciphertext);
+
+  try{
+    const aesKey = await deriveAesKeyForPrivateKey(password, saltKeyBytes, iterKey);
+    const pkcs8Bytes = await decryptPrivateKey(aesKey, ivBytes, ciphertextBytes);
+
+    /// ===== 登录成功后：写入 session（完整版） =====
+    session.avatarUrl = msg.avatar_url || "/resources/avatars/default.png";
+    session.httpToken = msg.http_token || null;
+    session.username = username;
+
+    /* ---------- 私钥 ---------- */
+    session.privateKeyPkcs8Bytes = pkcs8Bytes;
+
+    try {
+      session.privateKeyCryptoKey = await importPrivateKeyPkcs8(pkcs8Bytes);
+    } catch {
+      session.privateKeyCryptoKey = null;
+    }
+
+    /* ---------- 公钥 ---------- */
+    if (msg.publicKey && msg.publicKey.spki) {
+      session.publicKeySpkiBytes = base64ToBytes(msg.publicKey.spki);
+
+    try {
+      session.publicKeyCryptoKey = await crypto.subtle.importKey(
+      "spki",
+      session.publicKeySpkiBytes,
+      { name: "ECDH", namedCurve: "P-256" },
+      true,
+      []
+    );
+    } 
+    catch {
+      session.publicKeyCryptoKey = null;
+      }
+    } 
+    else {
+      session.publicKeySpkiBytes = null;
+      session.publicKeyCryptoKey = null;
+    }
+
+
+    // 清理 pendingLogin（尽量减少密码在内存里停留）
+    pendingLogin = null;
+
+    // ⚠️ JS 字符串无法真正“抹零”，所以别长期保存 password（我们也没保存到 session）
+    // 这里只能靠不持久化来减少风险
+
+    setStatus("");
+    enterHome();
+
+  }catch(err){
+    console.error(err);
+    setStatus("私钥解密失败：" + (err.message || err), true);
+    pendingLogin = null;
+  }
+}
+
+/* =====================================================
+   视图切换：登录 <-> 主页
+===================================================== */
+function enterHome(){
+  document.getElementById("viewLogin").classList.add("hidden");
+  document.getElementById("viewHome").classList.remove("hidden");
+  updateHomeBadges();
+}
+
+function backToLogin(){
+  document.getElementById("viewHome").classList.add("hidden");
+  document.getElementById("viewLogin").classList.remove("hidden");
+  updateHomeBadges();
+}
+
+function updateHomeBadges(){
+  const userEl = document.getElementById("homeUser");
+  const wsEl = document.getElementById("homeWs");
+  const keyEl = document.getElementById("homeKey");
+
+  userEl.textContent = "用户：" + (session.username || "-");
+  wsEl.textContent = "WS：" + (wsReady ? "已连接" : "未连接");
+  keyEl.textContent = "私钥：" + (session.privateKeyPkcs8Bytes ? "已加载(内存)" : "无");
+}
+
+/* =====================================================
+   表单：提交登录
+===================================================== */
+document.getElementById("loginForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  setStatus("");
+
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value;
+
+  if(!username) return setStatus("用户名不能为空", true);
+  if(!password) return setStatus("密码不能为空", true);
+
+  // 没连接就先连（connectWS 内部会防重复）
+  if(!wsReady){
+    setStatus("WebSocket 未连接，正在连接…");
+    connectWS();
+
+    // 给一点点时间（不等待也行；用户再点一次也能走）
+    // 这里不做异步等待，避免“卡住”的错觉
+  }
+
+  // 按推荐协议走 challenge
+  await startLogin(username, password);
+});
+
+/* =====================================================
+   退出：断开 ws + 清内存 + 回登录 + 新建 ws
+===================================================== */
+document.getElementById("btnLogout").addEventListener("click", ()=>{
+  // 1) 主动断开 WS
+  closeWS();
+
+  // 2) 清理 session
+  session.username = null;
+  session.publicKeySpkiBytes = null;
+
+  if (session.privateKeyPkcs8Bytes) {
+    session.privateKeyPkcs8Bytes.fill(0);
+  }
+  session.privateKeyPkcs8Bytes = null;
+  session.privateKeyCryptoKey = null;
+
+  pendingLogin = null;
+
+  // 3) 回到登录页
+  backToLogin();
+  setStatus("");
+
+  // 4) 建立一个全新的 ws
+  connectWS();
+});
+//进入主页显示头像
+function enterHome(){
+  document.getElementById("viewLogin").classList.add("hidden");
+  document.getElementById("viewHome").classList.remove("hidden");
+
+  const path = session.avatarUrl || "/resources/avatars/default.png";
+  document.getElementById("avatarImg").src = HTTP_BASE + path;
+
+  updateHomeBadges();
+}
+
+//上传头像
+document.getElementById("btnUploadAvatar").onclick = async ()=>{
+  const f = document.getElementById("avatarFile").files[0];
+  if(!f) return alert("选个图片");
+
+  const fd = new FormData();
+fd.append("file", f);
+
+const r = await fetch(HTTP_BASE + "/api/avatar/upload", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer " + (session.httpToken || "")
+  },
+  body: fd
+});
+
+
+
+
+  const j = await r.json();
+  if(!j.success) return alert("失败：" + j.error);
+
+  session.avatarUrl = j.avatar_url;
+  document.getElementById("avatarImg").src =
+    j.avatar_url + "?t=" + Date.now(); // 刷缓存
+};
+
+
+
+/* =====================================================
+   页面加载：自动连接 WS
+===================================================== */
+connectWS();
+</script>
+
+</body>
 </html>
