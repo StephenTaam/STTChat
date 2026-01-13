@@ -739,18 +739,6 @@ document.getElementById("btnUploadAvatar").onclick = async ()=>{
 
 
 
-
-
-  const j = await r.json();
-  if(!j.success) return alert("失败：" + j.error);
-
-  session.avatarUrl = j.avatar_url;
-  document.getElementById("avatarImg").src =
-    j.avatar_url + "?t=" + Date.now(); // 刷缓存
-};
-
-
-
 /* =====================================================
    页面加载：自动连接 WS
 ===================================================== */
