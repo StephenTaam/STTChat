@@ -623,11 +623,7 @@ async function handleLoginResult(msg){
 /* =====================================================
    视图切换：登录 <-> 主页
 ===================================================== */
-function enterHome(){
-  document.getElementById("viewLogin").classList.add("hidden");
-  document.getElementById("viewHome").classList.remove("hidden");
-  updateHomeBadges();
-}
+
 
 function backToLogin(){
   document.getElementById("viewHome").classList.add("hidden");
@@ -713,16 +709,34 @@ document.getElementById("btnUploadAvatar").onclick = async ()=>{
   const f = document.getElementById("avatarFile").files[0];
   if(!f) return alert("选个图片");
 
-  const fd = new FormData();
-fd.append("file", f);
+  // 读取为裸二进制
+  const buf = await f.arrayBuffer();
 
-const r = await fetch(HTTP_BASE + "/api/avatar/upload", {
-  method: "POST",
-  headers: {
-    "Authorization": "Bearer " + (session.httpToken || "")
-  },
-  body: fd
-});
+  const r = await fetch(HTTP_BASE + "/api/avatar/upload", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + (session.httpToken || ""),
+      "Content-Type": f.type || "application/octet-stream",
+      "X-Filename": encodeURIComponent(f.name)
+    },
+    body: buf
+  });
+
+  if(!r.ok){
+    return alert("HTTP 错误：" + r.status);
+  }
+
+  const j = await r.json();
+  if(!j.success){
+    return alert("失败：" + (j.error || "未知错误"));
+  }
+
+  // 更新头像
+  session.avatarUrl = j.avatar_url;
+  document.getElementById("avatarImg").src =
+    HTTP_BASE + j.avatar_url + "?t=" + Date.now(); // 防缓存
+};
+
 
 
 
