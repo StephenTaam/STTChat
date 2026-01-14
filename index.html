@@ -7,172 +7,532 @@
 <link rel="icon" type="image/png" href="imags/favicon.png">
 
 <style>
+  :root{
+    --bg: #0b1020;
+    --card: rgba(255,255,255,0.06);
+    --card2: rgba(255,255,255,0.08);
+    --border: rgba(255,255,255,0.10);
+    --text: rgba(255,255,255,0.92);
+    --muted: rgba(255,255,255,0.65);
+    --muted2: rgba(255,255,255,0.55);
+    --primary: #3b82f6;
+    --primary2:#2563eb;
+    --danger:#ef4444;
+    --danger2:#dc2626;
+    --ok:#22c55e;
+    --shadow: 0 18px 60px rgba(0,0,0,.45);
+    --radius: 16px;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
   body{
-    font-family: sans-serif;
-    max-width: 860px;
-    margin: 24px auto;
-    padding: 0 12px;
-    line-height: 1.5;
+    margin:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft Yahei", Arial, sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(1200px 600px at 10% 10%, rgba(59,130,246,.28), transparent 55%),
+      radial-gradient(900px 500px at 90% 20%, rgba(34,197,94,.20), transparent 60%),
+      radial-gradient(900px 500px at 70% 90%, rgba(239,68,68,.18), transparent 55%),
+      linear-gradient(180deg, #070a14, #050714);
   }
-  h1{ margin: 0 0 12px; }
-  .row{
-    display: grid;
-    grid-template-columns: 1fr 260px;
-    gap: 18px;
-    align-items: start;
+
+  .container{
+    max-width: 980px;
+    margin: 22px auto;
+    padding: 0 14px 50px;
   }
-  @media (max-width: 720px){
-    .row{ grid-template-columns: 1fr; }
+
+  .brandbar{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+  }
+  .logo{
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(59,130,246,.9), rgba(34,197,94,.75));
+    box-shadow: 0 12px 28px rgba(59,130,246,.25);
+  }
+  .brand h1{
+    margin:0;
+    font-size: 18px;
+    letter-spacing: .2px;
+  }
+  .brand .sub{
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 1.2fr .8fr;
+    gap: 14px;
+  }
+  @media (max-width: 860px){
+    .grid{ grid-template-columns: 1fr; }
+  }
+
+  .card{
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 14px;
+  }
+  .card.soft{
+    background: rgba(255,255,255,0.04);
+    box-shadow: none;
+  }
+
+  .title{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .title h2{
+    margin:0;
+    font-size: 15px;
+    color: rgba(255,255,255,.92);
+  }
+  .hint{
+    font-size: 12px;
+    color: var(--muted);
   }
 
   label{
     display:block;
-    margin-top: 12px;
-    font-weight: bold;
-    font-size: 14px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--muted);
   }
   input{
-    width: 100%;
-    padding: 9px;
-    margin-top: 6px;
-    font-size: 14px;
-    box-sizing: border-box;
+    width:100%;
+    margin-top:6px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    outline:none;
+    transition: .15s ease;
   }
-  small{ font-size: 12px; color:#666; display:block; margin-top:6px; }
+  input::placeholder{ color: rgba(255,255,255,.35); }
+  input:focus{
+    border-color: rgba(59,130,246,.65);
+    box-shadow: 0 0 0 4px rgba(59,130,246,.15);
+    background: rgba(255,255,255,0.075);
+  }
 
-  button{
-    margin-top: 16px;
-    padding: 10px 16px;
-    font-size: 15px;
-    cursor: pointer;
-  }
-  .btn-wide{
-    width: 100%;
+  .row{
+    display:flex;
+    gap: 10px;
+    align-items:center;
+    flex-wrap: wrap;
   }
 
-  .card{
-    border: 1px solid #ddd;
-    border-radius: 10px;
-    padding: 12px;
+  .btn{
+    appearance:none;
+    border:none;
+    border-radius: 12px;
+    padding: 10px 12px;
+    cursor:pointer;
+    font-weight: 600;
+    color: rgba(255,255,255,.92);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.10);
+    transition: .15s ease;
+    user-select:none;
   }
-  .muted{ color:#666; font-size: 12px; }
-  .error{ color:#c00; font-weight:bold; }
-  .success{ color:#090; font-weight:bold; }
+  .btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,0.11); }
+  .btn:active{ transform: translateY(0px); }
+  .btn.primary{
+    background: linear-gradient(135deg, var(--primary), var(--primary2));
+    border-color: rgba(255,255,255,0.10);
+  }
+  .btn.primary:hover{ filter: brightness(1.05); }
+  .btn.danger{
+    background: linear-gradient(135deg, var(--danger), var(--danger2));
+    border-color: rgba(255,255,255,0.10);
+  }
+  .btn.ghost{
+    background: transparent;
+  }
+  .btn.full{ width:100%; }
 
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.05);
+    font-size: 12px;
+    color: rgba(255,255,255,0.78);
+  }
+  .dot{
+    width:8px;height:8px;border-radius:999px;
+    background: rgba(255,255,255,0.40);
+  }
+  .dot.ok{ background: rgba(34,197,94,.95); }
+  .dot.bad{ background: rgba(239,68,68,.95); }
+  .dot.warn{ background: rgba(245,158,11,.95); }
+
+  .muted{ color: var(--muted); font-size: 12px; line-height: 1.45; }
+  .muted a{ color: rgba(147,197,253,.95); text-decoration:none; }
+  .muted a:hover{ text-decoration: underline; }
+
+  .sep{ height:1px; background: rgba(255,255,255,0.10); margin: 12px 0; }
+
+  /* Login password eye */
   .pw-wrapper{ position: relative; }
   .toggle-eye{
     position:absolute;
-    right: 12px;
+    right: 10px;
     top: 36px;
     cursor:pointer;
     user-select:none;
-    color:#666;
-    font-size: 18px;
-  }
-  @media (max-width: 480px){
-    .toggle-eye{ top: 34px; font-size: 16px; }
-    button{ width:100%; font-size:16px; padding:10px; }
+    font-size: 16px;
+    opacity:.85;
   }
 
-  a{ color:#0b62d6; text-decoration: none; }
-  a:hover{ text-decoration: underline; }
-
-  /* 视图切换 */
-  .hidden{ display:none; }
-
-  /* 首页 */
-  .topbar{
-    display:flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 10px;
-  }
-  .pill{
-    display:inline-block;
-    padding: 4px 10px;
+  /* Avatar */
+  .avatar{
+    width: 72px;
+    height: 72px;
     border-radius: 999px;
-    border: 1px solid #ddd;
-    font-size: 12px;
-    color:#444;
+    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.06);
+    object-fit: cover;
   }
+
+  /* Toast */
+  .toast-wrap{
+    position: fixed;
+    right: 16px;
+    top: 16px;
+    display:flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 999;
+    pointer-events: none;
+  }
+  .toast{
+    pointer-events: auto;
+    min-width: 260px;
+    max-width: 420px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.14);
+    background: rgba(14,18,35,0.90);
+    box-shadow: 0 18px 60px rgba(0,0,0,.55);
+    backdrop-filter: blur(10px);
+    display:flex;
+    gap: 10px;
+    align-items:flex-start;
+  }
+  .toast .badge{
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    margin-top: 4px;
+    background: rgba(255,255,255,.45);
+  }
+  .toast.ok .badge{ background: rgba(34,197,94,.95); }
+  .toast.err .badge{ background: rgba(239,68,68,.95); }
+  .toast.warn .badge{ background: rgba(245,158,11,.95); }
+  .toast .msg{
+    font-size: 12px;
+    color: rgba(255,255,255,.86);
+    line-height: 1.45;
+  }
+  .toast .x{
+    margin-left:auto;
+    cursor:pointer;
+    opacity:.7;
+    user-select:none;
+  }
+  .toast .x:hover{ opacity:1; }
+
+  /* Collapsible */
+  details{
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 14px;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.04);
+  }
+  details summary{
+    cursor:pointer;
+    list-style:none;
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 13px;
+    color: rgba(255,255,255,.9);
+  }
+  details summary::-webkit-details-marker{ display:none; }
+  details[open]{ background: rgba(255,255,255,0.05); }
+  .caret{ opacity:.7; }
+
+  /* hidden */
+  .hidden{ display:none; }
 </style>
 </head>
 
 <body>
+<div class="toast-wrap" id="toastWrap"></div>
 
-<!-- ========== 登录视图 ========== -->
-<div id="viewLogin">
-  <h1>登录</h1>
+<div class="container">
 
-  <div class="row">
-    <div class="card">
-      <form id="loginForm">
-        <label>
-          用户名
-          <input id="username" type="text" required autocomplete="username" />
-        </label>
-
-        <label>
-          密码
-          <div class="pw-wrapper">
-            <input id="password" type="password" required autocomplete="current-password" />
-            <span id="togglePw" class="toggle-eye">👁</span>
-          </div>
-          <small class="muted"></small>
-        </label>
-
-        <button class="btn-wide" type="submit">登录</button>
-
-        <p id="status" class="muted"></p>
-      </form>
+  <!-- ========== 登录视图 ========== -->
+  <div id="viewLogin">
+    <div class="brandbar">
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <h1>STTChat</h1>
+          <div class="sub">端到端加密 · 私钥仅保存在内存</div>
+        </div>
+      </div>
+      <div class="row">
+        <span class="pill" title="WebSocket 状态">
+          <span id="wsDot" class="dot bad"></span>
+          <span id="wsState">未连接</span>
+        </span>
+      </div>
     </div>
 
-    <div class="card">
-      <div style="display:flex; flex-direction:column; gap:10px;">
-        <div>
-          <div class="muted">连接状态</div>
-          <div id="wsState" class="pill">未连接</div>
+    <div class="grid">
+      <div class="card">
+        <div class="title">
+          <h2>登录</h2>
+          <span class="hint">WS challenge → 计算 hash → 登录 → 解密私钥</span>
         </div>
 
-        <div style="display:flex; flex-direction:column; gap:6px;">
-          <a id="linkRegister" href="#">注册账号</a>
+        <form id="loginForm">
+          <label>
+            用户名
+            <input id="username" type="text" required autocomplete="username" placeholder="输入用户名" />
+          </label>
+
+          <label>
+            密码
+            <div class="pw-wrapper">
+              <input id="password" type="password" required autocomplete="current-password" placeholder="输入密码" />
+              <span id="togglePw" class="toggle-eye">👁</span>
+            </div>
+            <div class="muted" style="margin-top:6px;">提示：登录时必须使用服务器返回的 salt 才能算出一致的 passwordHash。</div>
+          </label>
+
+          <button class="btn primary full" type="submit" style="margin-top:12px;">登录</button>
+
+          <div id="status" class="muted" style="margin-top:10px;"></div>
+        </form>
+      </div>
+
+      <div class="card soft">
+        <div class="title">
+          <h2>开始使用</h2>
+          <span class="hint">轻量设置</span>
         </div>
 
         <div class="muted">
-          打开页面会自动建立 wss 连接；退出会断开并重新建立新连接。
+          <div style="margin-bottom:10px;">
+            <div class="row" style="gap:8px;">
+              <span class="pill"><span class="dot warn"></span>打开页面会自动建立 wss 连接</span>
+              <span class="pill"><span class="dot warn"></span>退出会断开并重建新连接</span>
+            </div>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="row" style="justify-content: space-between;">
+            <div>
+              没有账号？
+              <a id="linkRegister" href="#">去注册</a>
+            </div>
+            <button class="btn ghost" id="btnReconnect" type="button">手动重连 WS</button>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="muted">
+            安全模型：
+            <ul style="margin:8px 0 0 18px; padding:0;">
+              <li>密码：PBKDF2-HMAC-SHA256 派生 passwordHash</li>
+              <li>私钥：AES-256-GCM 加密存服务器，客户端解密后仅存在内存</li>
+              <li>HTTP token：仅用于资料/头像等“账户管理”接口</li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<!-- ========== 主页视图 ========== -->
-<div id="viewHome" class="hidden">
-  <div class="topbar">
-    <h1 style="margin:0;">主页</h1>
-    <button id="btnLogout">退出</button>
-  </div>
-  <img id="avatarImg"
-     style="width:64px;height:64px;border-radius:50%;border:1px solid #ddd;">
+  <!-- ========== 主页视图 ========== -->
+  <div id="viewHome" class="hidden">
+    <div class="brandbar">
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <h1>设置</h1>
+          <div class="sub">Profile · Security · Danger Zone</div>
+        </div>
+      </div>
 
-
-  <input type="file" id="avatarFile" accept="image/*">
-  <button id="btnUploadAvatar">修改头像</button>
-
-  <div class="card">
-    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-      <span class="pill" id="homeUser">用户：-</span>
-      <span class="pill" id="homeWs">WS：-</span>
-      <span class="pill" id="homeKey">私钥：-</span>
+      <div class="row">
+        <span class="pill" title="WebSocket 状态">
+          <span id="wsDotHome" class="dot bad"></span>
+          <span id="homeWs">WS：-</span>
+        </span>
+        <button class="btn" id="btnLogout" type="button">退出</button>
+      </div>
     </div>
 
-    <div style="margin-top:12px;">
-      <div class="muted">
-        说明：私钥只在内存里（变量里）保存；退出会清空并断开 WS。
+    <div class="grid">
+      <!-- Left: Profile -->
+      <div class="card">
+        <div class="title">
+          <h2>个人资料</h2>
+          <span class="hint">头像 / 昵称</span>
+        </div>
+
+        <div class="row" style="align-items: center; gap: 14px;">
+          <img id="avatarImg" class="avatar" alt="avatar">
+          <div style="flex:1; min-width: 220px;">
+            <div class="row" style="justify-content: space-between;">
+              <span class="pill" id="homeUser">用户：-</span>
+              <span class="pill" id="homeKey">私钥：-</span>
+            </div>
+            <div class="muted" style="margin-top:8px;">
+              私钥只在内存中；退出会清空并断开 WS。
+            </div>
+          </div>
+        </div>
+
+        <div class="sep"></div>
+
+        <label>
+          昵称（display_name）
+          <input id="displayName" type="text" placeholder="比如：StephenTaam" maxlength="32">
+        </label>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn primary" id="btnSaveProfile" type="button">保存昵称</button>
+          <span class="muted" id="profileHint"></span>
+        </div>
+
+        <div class="sep"></div>
+
+        <label>
+          修改头像
+          <input type="file" id="avatarFile" accept="image/*">
+        </label>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn" id="btnUploadAvatar" type="button">上传头像</button>
+          <span class="muted" id="avatarHint"></span>
+        </div>
+      </div>
+
+      <!-- Right: Security + Danger -->
+      <div class="card soft">
+        <div class="title">
+          <h2>安全</h2>
+          <span class="hint">改密码会重新加密私钥</span>
+        </div>
+
+        <details id="panelPassword">
+          <summary>
+            改密码
+            <span class="caret">▾</span>
+          </summary>
+
+          <div class="muted" style="margin-top:10px;">
+            改密码需要：
+            <ul style="margin:6px 0 0 18px; padding:0;">
+              <li>用旧密码校验 oldPasswordHash</li>
+              <li>用新密码生成 newPasswordHash</li>
+              <li>用新密码派生 AES key 重新加密私钥并提交</li>
+            </ul>
+          </div>
+
+          <label>
+            旧密码
+            <input id="oldPw" type="password" autocomplete="current-password" placeholder="输入旧密码">
+          </label>
+          <label>
+            新密码
+            <input id="newPw" type="password" autocomplete="new-password" placeholder="输入新密码（建议 10+ 位）">
+          </label>
+          <label>
+            确认新密码
+            <input id="newPw2" type="password" autocomplete="new-password" placeholder="再次输入新密码">
+          </label>
+
+          <div class="row" style="margin-top:10px;">
+            <button class="btn primary" id="btnChangePassword" type="button">提交改密码</button>
+            <span class="muted" id="pwHint"></span>
+          </div>
+        </details>
+
+        <div class="sep"></div>
+
+        <div class="title">
+          <h2 style="color: rgba(255,255,255,.9);">Danger Zone</h2>
+          <span class="hint" style="color: rgba(255,255,255,.55);">不可恢复</span>
+        </div>
+
+        <details id="panelDelete">
+          <summary>
+            注销账号（永久删除）
+            <span class="caret">▾</span>
+          </summary>
+
+          <div class="muted" style="margin-top:10px;">
+            这是危险操作：会删除你的账号数据。建议你要求用户输入密码再次确认。
+          </div>
+
+          <label>
+            输入密码确认
+            <input id="delPw" type="password" autocomplete="current-password" placeholder="输入当前密码">
+          </label>
+
+          <label>
+            二次确认（输入 DELETE）
+            <input id="delConfirm" type="text" placeholder="DELETE">
+          </label>
+
+          <div class="row" style="margin-top:10px;">
+            <button class="btn danger" id="btnDeleteAccount" type="button">我确认注销账号</button>
+            <span class="muted" id="delHint"></span>
+          </div>
+        </details>
+
+        <div class="sep"></div>
+        <div class="muted">
+          连接信息：
+          <div class="row" style="margin-top:8px; gap:8px;">
+            <span class="pill" id="pillHttp">HTTP：-</span>
+            <span class="pill" id="pillWs">WS：-</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+
 </div>
 
 <script>
@@ -180,50 +540,88 @@
    配置：你需要改这里
 ===================================================== */
 const HTTP_BASE = "https://42.51.13.120:8080"; // ← 你的 HTTP 服务 IP + 端口
-const WS_URL = "wss://42.51.13.120:5050";     // ✅ 改成你的 wss 地址
-const REGISTER_URL = "resources/signup.html";            // ✅ 改成你的注册页
+const WS_URL = "wss://42.51.13.120:5050";     // ← 你的 wss 地址
+const REGISTER_URL = "resources/signup.html";  // ← 你的注册页
 /* =====================================================
-   密码学参数（跟注册页保持一致 / 或按你服务器定）
+   密码学参数
 ===================================================== */
-const PBKDF2_ITER_PWHASH = 200000;   // 登录密码哈希
+const PBKDF2_ITER_PWHASH = 200000;     // 登录 passwordHash 默认 iterations
 const PBKDF2_ITER_KEY_DEFAULT = 200000; // 若服务器没返回 iterations，就用这个
 const textEncoder = new TextEncoder();
+
+/* =====================================================
+   Toast
+===================================================== */
+function toast(msg, type="ok", ms=3200){
+  const wrap = document.getElementById("toastWrap");
+  const el = document.createElement("div");
+  el.className = "toast " + (type === "err" ? "err" : (type === "warn" ? "warn" : "ok"));
+  el.innerHTML = `
+    <div class="badge"></div>
+    <div class="msg">${escapeHtml(msg)}</div>
+    <div class="x">✕</div>
+  `;
+  wrap.appendChild(el);
+  const rm = ()=>{ try{ el.remove(); }catch{} };
+  el.querySelector(".x").onclick = rm;
+  setTimeout(rm, ms);
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, (c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
 
 /* =====================================================
    全局状态（只放内存）
 ===================================================== */
 let reconnectTimer = null;
-let reconnectDelay = 3000; // 3 秒
-
+let reconnectDelay = 3000;
 let ws = null;
 let wsReady = false;
 
 let session = {
   username: null,
+  displayName: null,
   avatarUrl : null,
   httpToken : null,
+
+  // 登录 challenge 的 password hash 参数（后续改密码/注销用）
+  pwSaltB64: null,
+  pwIterations: null,
 
   // 解密出的私钥（只在内存）
   privateKeyPkcs8Bytes: null,  // Uint8Array
   privateKeyCryptoKey: null,   // CryptoKey（可选）
   publicKeySpkiBytes: null,    // Uint8Array（可选）
-
-  // 你也可以放一些“已登录标识”等
+  publicKeyCryptoKey: null
 };
 
 /* =====================================================
    小工具
 ===================================================== */
+function $(id){ return document.getElementById(id); }
+
 function setStatus(msg, isErr=false){
-  const el = document.getElementById("status");
+  const el = $("status");
   el.textContent = msg;
-  el.className = isErr ? "error" : (msg ? "muted" : "muted");
-  if(!msg) el.className = "muted";
+  el.style.color = isErr ? "rgba(239,68,68,.95)" : "rgba(255,255,255,.70)";
 }
+
 function setWsState(text){
-  const el = document.getElementById("wsState");
-  el.textContent = text;
+  $("wsState").textContent = text;
 }
+
+function updateWsDot(){
+  const dot1 = $("wsDot");
+  const dot2 = $("wsDotHome");
+  const ok = wsReady;
+  if(dot1){
+    dot1.className = "dot " + (ok ? "ok" : "bad");
+  }
+  if(dot2){
+    dot2.className = "dot " + (ok ? "ok" : "bad");
+  }
+}
+
 function strToUint8(s){ return textEncoder.encode(s); }
 
 function base64ToBytes(b64){
@@ -248,8 +646,8 @@ function getRandomBytes(n){
    UI：眼睛切换
 ===================================================== */
 (function setupEye(){
-  const input = document.getElementById("password");
-  const eye = document.getElementById("togglePw");
+  const input = $("password");
+  const eye = $("togglePw");
   eye.addEventListener("click", ()=> {
     input.type = (input.type === "password" ? "text" : "password");
   });
@@ -258,15 +656,20 @@ function getRandomBytes(n){
 /* =====================================================
    链接
 ===================================================== */
-document.getElementById("linkRegister").addEventListener("click", (e)=>{
+$("linkRegister").addEventListener("click", (e)=>{
   e.preventDefault();
   location.href = REGISTER_URL;
 });
-
+$("btnReconnect").addEventListener("click", ()=>{
+  toast("正在手动重连 WS…", "warn");
+  try{ if(ws) ws.close(4000, "manual reconnect"); }catch{}
+  ws = null;
+  wsReady = false;
+  connectWS();
+});
 
 /* =====================================================
    WebCrypto：PBKDF2 派生 passwordHash
-   ⚠️ 登录必须用“服务器给的 salt”，否则每次随机 salt 会导致 hash 永远不同
 ===================================================== */
 async function derivePasswordHash(password, saltBytes, iterations){
   const baseKey = await crypto.subtle.importKey(
@@ -278,23 +681,15 @@ async function derivePasswordHash(password, saltBytes, iterations){
   );
 
   const bits = await crypto.subtle.deriveBits(
-    {
-      name:"PBKDF2",
-      salt: saltBytes,
-      iterations,
-      hash:"SHA-256"
-    },
+    { name:"PBKDF2", salt: saltBytes, iterations, hash:"SHA-256" },
     baseKey,
     256
   );
-
   return new Uint8Array(bits); // 32 bytes
 }
 
-/* =====================================================
-   WebCrypto：密码 → AES-256-GCM key（解密私钥）
-===================================================== */
-async function deriveAesKeyForPrivateKey(password, saltBytes, iterations){
+/* 密码 → AES-256-GCM key（解密/加密私钥） */
+async function deriveAesKey(password, saltBytes, iterations, usage){
   const baseKey = await crypto.subtle.importKey(
     "raw",
     strToUint8(password),
@@ -302,18 +697,12 @@ async function deriveAesKeyForPrivateKey(password, saltBytes, iterations){
     false,
     ["deriveKey"]
   );
-
   return await crypto.subtle.deriveKey(
-    {
-      name:"PBKDF2",
-      salt: saltBytes,
-      iterations,
-      hash:"SHA-256"
-    },
+    { name:"PBKDF2", salt: saltBytes, iterations, hash:"SHA-256" },
     baseKey,
     { name:"AES-GCM", length:256 },
     false,
-    ["decrypt"]
+    usage
   );
 }
 
@@ -326,9 +715,16 @@ async function decryptPrivateKey(aesKey, ivBytes, ciphertextBytes){
   return new Uint8Array(pkcs8);
 }
 
-/* 可选：把 pkcs8 私钥 bytes 导入成 CryptoKey（比如后续做 ECDH / 签名等） */
+async function encryptPrivateKey(aesKey, ivBytes, plainBytes){
+  const ct = await crypto.subtle.encrypt(
+    { name:"AES-GCM", iv: ivBytes },
+    aesKey,
+    plainBytes
+  );
+  return new Uint8Array(ct);
+}
+
 async function importPrivateKeyPkcs8(pkcs8Bytes){
-  // 你注册用的是 ECDH P-256（注意：WebCrypto 的 ECDH 私钥用途只能 deriveKey/deriveBits）
   return await crypto.subtle.importKey(
     "pkcs8",
     pkcs8Bytes,
@@ -342,64 +738,53 @@ async function importPrivateKeyPkcs8(pkcs8Bytes){
    WebSocket：连接 / 重连
 ===================================================== */
 function connectWS(){
-  // 防止重复连接
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
     return;
   }
 
   wsReady = false;
   setWsState("连接中…");
+  updateWsDot();
 
   const currentWS = new WebSocket(WS_URL);
   ws = currentWS;
 
   currentWS.onopen = () => {
-    // 防止旧 ws 影响新 ws
     if (ws !== currentWS) return;
-
     wsReady = true;
     setWsState("已连接");
+    updateWsDot();
     updateHomeBadges();
+    updateConnPills();
 
-    // 成功连接，清重连状态
-    if (reconnectTimer) {
-      clearTimeout(reconnectTimer);
-      reconnectTimer = null;
-    }
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
     reconnectDelay = 3000;
   };
 
   currentWS.onclose = () => {
-    // ⭐ 关键：只处理“当前 ws”的 close
     if (ws !== currentWS) return;
 
     wsReady = false;
     ws = null;
 
     setWsState("已断开");
+    updateWsDot();
     updateHomeBadges();
+    updateConnPills();
 
-    // 如果已登录，强制回登录页
     if (session.username) {
-      session.username = null;
-
-      if (session.privateKeyPkcs8Bytes) {
-        session.privateKeyPkcs8Bytes.fill(0);
-      }
-      session.privateKeyPkcs8Bytes = null;
-      session.privateKeyCryptoKey = null;
-      session.publicKeySpkiBytes = null;
-
+      // 已登录时断线：强制回登录页
+      wipeSensitiveMemory();
       pendingLogin = null;
-
       backToLogin();
       setStatus("连接已断开，请重新登录", true);
+      toast("WS 断开：请重新登录", "err");
     }
 
-    // 防止重复定时器
     if (reconnectTimer) return;
 
     setWsState("断开，重连中…");
+    updateWsDot();
 
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
@@ -408,58 +793,39 @@ function connectWS(){
     }, reconnectDelay);
   };
 
-  currentWS.onerror = () => {
-    // 统一由 onclose 处理
-  };
+  currentWS.onerror = () => { /* 统一由 onclose 处理 */ };
 
   currentWS.onmessage = async (ev) => {
-    // 防止旧 ws 收到消息
     if (ws !== currentWS) return;
 
     let msg;
-    try {
-      msg = JSON.parse(ev.data);
-    } catch {
-      return;
-    }
+    try { msg = JSON.parse(ev.data); } catch { return; }
 
     if (msg.type === "login_challenge") {
       await handleLoginChallenge(msg);
       return;
     }
-
     if (msg.type === "login_result") {
       await handleLoginResult(msg);
       return;
     }
-
     // 其他消息
   };
 }
 
-
-
 function closeWS(){
   if (ws) {
-    try {
-      ws.close(1000, "logout");
-    } catch {}
+    try { ws.close(1000, "logout"); } catch {}
   }
   ws = null;
   wsReady = false;
+  updateWsDot();
 }
 
-
-
 /* =====================================================
-   登录协议（推荐的两步）
-   Step1: client -> server: {type:"login_start", username}
-   Step2: server -> client: {type:"login_challenge", salt, iterations}
-   Step3: client -> server: {type:"login", username, passwordHash:{...}}
-   Step4: server -> client: {type:"login_result", success, publicKey, encryptedPrivateKey, ...}
+   登录协议（两步）
 ===================================================== */
-
-let pendingLogin = null; // {username, password} 临时放一下（只在挑战期间用）
+let pendingLogin = null; // {username, password}
 
 async function sendJson(obj){
   if (!ws || ws.readyState !== WebSocket.OPEN) {
@@ -471,16 +837,10 @@ async function sendJson(obj){
   return true;
 }
 
-
 async function startLogin(username, password){
-  // 把密码暂存到 pendingLogin，只用一次：用于算 hash、解密私钥
   pendingLogin = { username, password };
 
-  // 发起挑战：让服务器给 salt（必须）
-  const ok = await sendJson({
-    type: "login_start",
-    username
-  });
+  const ok = await sendJson({ type:"login_start", username });
   if(ok) setStatus("请求登录参数中…");
 }
 
@@ -489,17 +849,19 @@ async function handleLoginChallenge(msg){
 
   const { username, password } = pendingLogin;
 
-  // ✅ 兼容两种结构：
-  // 1) {salt, iterations}
-  // 2) {passwordHash:{salt, iterations}}
   const saltB64 = msg?.salt ?? msg?.passwordHash?.salt;
   const iterations = Number(msg?.iterations ?? msg?.passwordHash?.iterations ?? PBKDF2_ITER_PWHASH);
 
   if(!saltB64){
     setStatus("服务器未返回 salt，无法登录", true);
     pendingLogin = null;
+    toast("服务器未返回 salt", "err");
     return;
   }
+
+  // 保存 challenge 参数（后续改密码/注销用）
+  session.pwSaltB64 = saltB64;
+  session.pwIterations = iterations;
 
   const saltBytes = base64ToBytes(saltB64);
 
@@ -520,37 +882,25 @@ async function handleLoginChallenge(msg){
   setStatus("发送登录请求中…");
 }
 
-
 async function handleLoginResult(msg){
-
-  // msg 推荐结构：
-  // {
-  //   type:"login_result",
-  //   success:true/false,
-  //   error:"...",
-  //   publicKey:{alg:"ECDH",curve:"P-256",spki:"base64"},
-  //   encryptedPrivateKey:{kdf:"PBKDF2-HMAC-SHA256",iterations:200000,salt:"base64",cipher:"AES-256-GCM",iv:"base64",ciphertext:"base64"}
-  // }
-  if(!pendingLogin){
-    // 也可能是“重复登录”等情况；按你需求处理
-  }
-
   if(!msg.success){
     setStatus("登录失败：" + (msg.error || "未知原因"), true);
+    toast("登录失败：" + (msg.error || "未知原因"), "err");
     pendingLogin = null;
     return;
   }
 
   if(!pendingLogin){
-    setStatus("登录成功，但本地缺少待处理密码上下文（pendingLogin）", true);
+    setStatus("登录成功，但本地缺少 pendingLogin（密码上下文）", true);
+    toast("登录成功但缺少 pendingLogin", "warn");
     return;
   }
 
   const { username, password } = pendingLogin;
 
-  // 校验返回字段
   if(!msg.encryptedPrivateKey || !msg.encryptedPrivateKey.salt || !msg.encryptedPrivateKey.iv || !msg.encryptedPrivateKey.ciphertext){
     setStatus("登录成功，但服务器未返回加密私钥字段", true);
+    toast("缺少 encryptedPrivateKey", "err");
     pendingLogin = null;
     return;
   }
@@ -564,180 +914,465 @@ async function handleLoginResult(msg){
   const ciphertextBytes = base64ToBytes(epk.ciphertext);
 
   try{
-    const aesKey = await deriveAesKeyForPrivateKey(password, saltKeyBytes, iterKey);
+    const aesKey = await deriveAesKey(password, saltKeyBytes, iterKey, ["decrypt"]);
     const pkcs8Bytes = await decryptPrivateKey(aesKey, ivBytes, ciphertextBytes);
 
-    /// ===== 登录成功后：写入 session（完整版） =====
-    session.avatarUrl = msg.avatar_url || "/resources/avatars/default.png";
-    session.httpToken = msg.http_token || null;
+    // ===== 登录成功后：写入 session =====
     session.username = username;
+    session.httpToken = msg.http_token || null;
+    session.avatarUrl = msg.avatar_url || "/resources/avatars/default.png";
+    session.displayName = msg.display_name || msg.displayName || "";
 
-    /* ---------- 私钥 ---------- */
     session.privateKeyPkcs8Bytes = pkcs8Bytes;
 
-    try {
-      session.privateKeyCryptoKey = await importPrivateKeyPkcs8(pkcs8Bytes);
-    } catch {
-      session.privateKeyCryptoKey = null;
-    }
+    try { session.privateKeyCryptoKey = await importPrivateKeyPkcs8(pkcs8Bytes); }
+    catch { session.privateKeyCryptoKey = null; }
 
-    /* ---------- 公钥 ---------- */
     if (msg.publicKey && msg.publicKey.spki) {
       session.publicKeySpkiBytes = base64ToBytes(msg.publicKey.spki);
-
-    try {
-      session.publicKeyCryptoKey = await crypto.subtle.importKey(
-      "spki",
-      session.publicKeySpkiBytes,
-      { name: "ECDH", namedCurve: "P-256" },
-      true,
-      []
-    );
-    } 
-    catch {
-      session.publicKeyCryptoKey = null;
-      }
-    } 
-    else {
+      try {
+        session.publicKeyCryptoKey = await crypto.subtle.importKey(
+          "spki",
+          session.publicKeySpkiBytes,
+          { name: "ECDH", namedCurve: "P-256" },
+          true,
+          []
+        );
+      } catch { session.publicKeyCryptoKey = null; }
+    } else {
       session.publicKeySpkiBytes = null;
       session.publicKeyCryptoKey = null;
     }
 
-
-    // 清理 pendingLogin（尽量减少密码在内存里停留）
     pendingLogin = null;
-
-    // ⚠️ JS 字符串无法真正“抹零”，所以别长期保存 password（我们也没保存到 session）
-    // 这里只能靠不持久化来减少风险
-
     setStatus("");
+    toast("登录成功", "ok");
     enterHome();
 
   }catch(err){
     console.error(err);
     setStatus("私钥解密失败：" + (err.message || err), true);
+    toast("私钥解密失败", "err");
     pendingLogin = null;
   }
 }
 
 /* =====================================================
-   视图切换：登录 <-> 主页
+   视图切换
 ===================================================== */
-
-
 function backToLogin(){
-  document.getElementById("viewHome").classList.add("hidden");
-  document.getElementById("viewLogin").classList.remove("hidden");
+  $("viewHome").classList.add("hidden");
+  $("viewLogin").classList.remove("hidden");
   updateHomeBadges();
+  updateConnPills();
+}
+
+function enterHome(){
+  $("viewLogin").classList.add("hidden");
+  $("viewHome").classList.remove("hidden");
+
+  const path = session.avatarUrl || "/resources/avatars/default.png";
+  $("avatarImg").src = HTTP_BASE + path;
+
+  $("displayName").value = session.displayName || "";
+
+  updateHomeBadges();
+  updateConnPills();
 }
 
 function updateHomeBadges(){
-  const userEl = document.getElementById("homeUser");
-  const wsEl = document.getElementById("homeWs");
-  const keyEl = document.getElementById("homeKey");
+  if($("homeUser")) $("homeUser").textContent = "用户：" + (session.username || "-");
+  if($("homeWs")) $("homeWs").textContent = "WS：" + (wsReady ? "已连接" : "未连接");
+  if($("homeKey")) $("homeKey").textContent = "私钥：" + (session.privateKeyPkcs8Bytes ? "已加载(内存)" : "无");
+  updateWsDot();
+}
 
-  userEl.textContent = "用户：" + (session.username || "-");
-  wsEl.textContent = "WS：" + (wsReady ? "已连接" : "未连接");
-  keyEl.textContent = "私钥：" + (session.privateKeyPkcs8Bytes ? "已加载(内存)" : "无");
+function updateConnPills(){
+  if($("pillHttp")) $("pillHttp").textContent = "HTTP：" + (session.httpToken ? "已登录(token)" : "-");
+  if($("pillWs")) $("pillWs").textContent = "WS：" + (wsReady ? "已连接" : "未连接");
+}
+
+/* 清理敏感内存 */
+function wipeSensitiveMemory(){
+  session.username = null;
+  session.displayName = null;
+  session.avatarUrl = null;
+  session.httpToken = null;
+
+  session.pwSaltB64 = null;
+  session.pwIterations = null;
+
+  session.publicKeySpkiBytes = null;
+  session.publicKeyCryptoKey = null;
+
+  if (session.privateKeyPkcs8Bytes) {
+    try { session.privateKeyPkcs8Bytes.fill(0); } catch {}
+  }
+  session.privateKeyPkcs8Bytes = null;
+  session.privateKeyCryptoKey = null;
 }
 
 /* =====================================================
-   表单：提交登录
+   登录表单
 ===================================================== */
-document.getElementById("loginForm").addEventListener("submit", async (e)=>{
+$("loginForm").addEventListener("submit", async (e)=>{
   e.preventDefault();
   setStatus("");
 
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value;
+  const username = $("username").value.trim();
+  const password = $("password").value;
 
   if(!username) return setStatus("用户名不能为空", true);
   if(!password) return setStatus("密码不能为空", true);
 
-  // 没连接就先连（connectWS 内部会防重复）
   if(!wsReady){
     setStatus("WebSocket 未连接，正在连接…");
     connectWS();
-
-    // 给一点点时间（不等待也行；用户再点一次也能走）
-    // 这里不做异步等待，避免“卡住”的错觉
   }
 
-  // 按推荐协议走 challenge
   await startLogin(username, password);
 });
 
 /* =====================================================
-   退出：断开 ws + 清内存 + 回登录 + 新建 ws
+   退出
 ===================================================== */
-document.getElementById("btnLogout").addEventListener("click", ()=>{
-  // 1) 主动断开 WS
+$("btnLogout").addEventListener("click", ()=>{
   closeWS();
-
-  // 2) 清理 session
-  session.username = null;
-  session.publicKeySpkiBytes = null;
-
-  if (session.privateKeyPkcs8Bytes) {
-    session.privateKeyPkcs8Bytes.fill(0);
-  }
-  session.privateKeyPkcs8Bytes = null;
-  session.privateKeyCryptoKey = null;
-
+  wipeSensitiveMemory();
   pendingLogin = null;
 
-  // 3) 回到登录页
   backToLogin();
   setStatus("");
+  toast("已退出", "ok");
 
-  // 4) 建立一个全新的 ws
   connectWS();
 });
-//进入主页显示头像
-function enterHome(){
-  document.getElementById("viewLogin").classList.add("hidden");
-  document.getElementById("viewHome").classList.remove("hidden");
 
-  const path = session.avatarUrl || "/resources/avatars/default.png";
-  document.getElementById("avatarImg").src = HTTP_BASE + path;
-
-  updateHomeBadges();
+/* =====================================================
+   HTTP helper
+===================================================== */
+async function authedFetch(path, opt={}){
+  const headers = opt.headers ? {...opt.headers} : {};
+  if(session.httpToken){
+    headers["Authorization"] = "Bearer " + session.httpToken;
+  }
+  return await fetch(HTTP_BASE + path, { ...opt, headers });
 }
 
-//上传头像
-document.getElementById("btnUploadAvatar").onclick = async ()=>{
-  const f = document.getElementById("avatarFile").files[0];
-  if(!f) return alert("选个图片");
+async function readJsonSafe(resp){
+  try { return await resp.json(); } catch { return null; }
+}
 
-  // 读取为裸二进制
-  const buf = await f.arrayBuffer();
+/* =====================================================
+   Profile：保存昵称
+===================================================== */
+$("btnSaveProfile").onclick = async ()=>{
+  const name = ($("displayName").value || "").trim();
+  $("profileHint").textContent = "";
 
-  const r = await fetch(HTTP_BASE + "/api/avatar/upload", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + (session.httpToken || ""),
-      "Content-Type": f.type || "application/octet-stream",
-      "X-Filename": encodeURIComponent(f.name)
-    },
-    body: buf
-  });
-
-  if(!r.ok){
-    return alert("HTTP 错误：" + r.status);
+  if(!session.httpToken){
+    toast("没有 http_token：后端需要在 login_result 返回 http_token", "err");
+    $("profileHint").textContent = "缺少 http_token";
+    return;
   }
 
-  const j = await r.json();
-  if(!j.success){
-    return alert("失败：" + (j.error || "未知错误"));
-  }
+  try{
+    const r = await authedFetch("/api/user/profile", {
+      method: "PATCH",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({ display_name: name })
+    });
 
-  // 更新头像
-  session.avatarUrl = j.avatar_url;
-  document.getElementById("avatarImg").src =
-    HTTP_BASE + j.avatar_url + "?t=" + Date.now(); // 防缓存
+    const j = await readJsonSafe(r);
+
+    if(!r.ok){
+      toast("保存失败：HTTP " + r.status, "err");
+      $("profileHint").textContent = "HTTP " + r.status;
+      return;
+    }
+    if(!j || !j.success){
+      toast("保存失败：" + ((j && j.error) ? j.error : "未知错误"), "err");
+      $("profileHint").textContent = (j && j.error) ? j.error : "未知错误";
+      return;
+    }
+
+    session.displayName = j.display_name ?? name;
+    toast("昵称已保存", "ok");
+    $("profileHint").textContent = "已保存";
+    setTimeout(()=> $("profileHint").textContent="", 2000);
+
+  }catch(e){
+    console.error(e);
+    toast("保存失败（网络/异常）", "err");
+    $("profileHint").textContent = "异常";
+  }
 };
 
+/* =====================================================
+   头像上传
+===================================================== */
+$("btnUploadAvatar").onclick = async ()=>{
+  $("avatarHint").textContent = "";
+  const f = $("avatarFile").files[0];
+  if(!f) { toast("先选个图片", "warn"); return; }
 
+  if(!session.httpToken){
+    toast("没有 http_token：头像上传需要鉴权", "err");
+    $("avatarHint").textContent = "缺少 http_token";
+    return;
+  }
+
+  try{
+    const buf = await f.arrayBuffer();
+
+    const r = await authedFetch("/api/avatar/upload", {
+      method: "POST",
+      headers: {
+        "Content-Type": f.type || "application/octet-stream",
+        "X-Filename": encodeURIComponent(f.name)
+      },
+      body: buf
+    });
+
+    if(!r.ok){
+      toast("头像上传失败：HTTP " + r.status, "err");
+      $("avatarHint").textContent = "HTTP " + r.status;
+      return;
+    }
+
+    const j = await readJsonSafe(r);
+    if(!j || !j.success){
+      toast("头像上传失败：" + ((j && j.error) ? j.error : "未知错误"), "err");
+      $("avatarHint").textContent = (j && j.error) ? j.error : "未知错误";
+      return;
+    }
+
+    session.avatarUrl = j.avatar_url;
+    $("avatarImg").src = HTTP_BASE + j.avatar_url + "?t=" + Date.now();
+    toast("头像已更新", "ok");
+    $("avatarHint").textContent = "已更新";
+    setTimeout(()=> $("avatarHint").textContent="", 2000);
+
+  }catch(e){
+    console.error(e);
+    toast("头像上传失败（网络/异常）", "err");
+    $("avatarHint").textContent = "异常";
+  }
+};
+
+/* =====================================================
+   改密码：生成 newPasswordHash + newEncryptedPrivateKey
+===================================================== */
+$("btnChangePassword").onclick = async ()=>{
+  $("pwHint").textContent = "";
+
+  if(!session.httpToken){
+    toast("缺少 http_token：改密码需要鉴权", "err");
+    $("pwHint").textContent = "缺少 http_token";
+    return;
+  }
+  if(!session.privateKeyPkcs8Bytes){
+    toast("本地没有私钥（内存）：无法重新加密", "err");
+    $("pwHint").textContent = "缺少私钥";
+    return;
+  }
+  if(!session.pwSaltB64 || !session.pwIterations){
+    toast("缺少登录 challenge 的 salt/iterations：无法算 oldPasswordHash", "err");
+    $("pwHint").textContent = "缺少 challenge 参数";
+    return;
+  }
+
+  const oldPw = $("oldPw").value;
+  const newPw = $("newPw").value;
+  const newPw2 = $("newPw2").value;
+
+  if(!oldPw || !newPw || !newPw2){
+    toast("请把旧密码/新密码填完整", "warn");
+    return;
+  }
+  if(newPw !== newPw2){
+    toast("两次新密码不一致", "warn");
+    return;
+  }
+  if(newPw.length < 8){
+    toast("新密码建议至少 8 位", "warn");
+  }
+
+  try{
+    $("pwHint").textContent = "计算中…";
+
+    // oldPasswordHash（使用登录 challenge 的 salt/iter）
+    const oldSaltBytes = base64ToBytes(session.pwSaltB64);
+    const oldHashBytes = await derivePasswordHash(oldPw, oldSaltBytes, Number(session.pwIterations));
+
+    const oldPasswordHash = {
+      kdf: "PBKDF2-HMAC-SHA256",
+      iterations: Number(session.pwIterations),
+      salt: session.pwSaltB64,
+      hash: bufToBase64(oldHashBytes)
+    };
+
+    // newPasswordHash（生成新 salt）
+    const newSaltBytes = getRandomBytes(16);
+    const newSaltB64 = bufToBase64(newSaltBytes);
+    const newIter = PBKDF2_ITER_PWHASH;
+    const newHashBytes = await derivePasswordHash(newPw, newSaltBytes, newIter);
+
+    const newPasswordHash = {
+      kdf: "PBKDF2-HMAC-SHA256",
+      iterations: newIter,
+      salt: newSaltB64,
+      hash: bufToBase64(newHashBytes)
+    };
+
+    // newEncryptedPrivateKey（用 newPw 派生 AES key，再加密 pkcs8）
+    const keySaltBytes = getRandomBytes(16);
+    const keySaltB64 = bufToBase64(keySaltBytes);
+    const keyIter = PBKDF2_ITER_KEY_DEFAULT;
+
+    const ivBytes = getRandomBytes(12);
+    const ivB64 = bufToBase64(ivBytes);
+
+    const aesEncKey = await deriveAesKey(newPw, keySaltBytes, keyIter, ["encrypt"]);
+    const ctBytes = await encryptPrivateKey(aesEncKey, ivBytes, session.privateKeyPkcs8Bytes);
+
+    const newEncryptedPrivateKey = {
+      kdf: "PBKDF2-HMAC-SHA256",
+      iterations: keyIter,
+      salt: keySaltB64,
+      cipher: "AES-256-GCM",
+      iv: ivB64,
+      ciphertext: bufToBase64(ctBytes)
+    };
+
+    // 发给后端
+    const r = await authedFetch("/api/user/password", {
+      method: "POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({ oldPasswordHash, newPasswordHash, newEncryptedPrivateKey })
+    });
+
+    const j = await readJsonSafe(r);
+
+    if(!r.ok){
+      toast("改密码失败：HTTP " + r.status, "err");
+      $("pwHint").textContent = "HTTP " + r.status;
+      return;
+    }
+    if(!j || !j.success){
+      toast("改密码失败：" + ((j && j.error) ? j.error : "未知错误"), "err");
+      $("pwHint").textContent = (j && j.error) ? j.error : "未知错误";
+      return;
+    }
+
+    // 改密码成功：更新 session 的 challenge 参数为“新密码 hash 的 salt/iter”
+    session.pwSaltB64 = newPasswordHash.salt;
+    session.pwIterations = newPasswordHash.iterations;
+
+    // 由于你不保存密码，这里不更新任何“password”，只提示用户下次登录用新密码
+    toast("改密码成功（私钥已重新加密）", "ok");
+    $("pwHint").textContent = "成功";
+    $("oldPw").value = "";
+    $("newPw").value = "";
+    $("newPw2").value = "";
+
+    // 收起 panel
+    $("panelPassword").open = false;
+
+  }catch(e){
+    console.error(e);
+    toast("改密码失败（异常）", "err");
+    $("pwHint").textContent = "异常";
+  } finally {
+    setTimeout(()=> { if($("pwHint").textContent==="成功") $("pwHint").textContent=""; }, 2200);
+  }
+};
+
+/* =====================================================
+   注销账号
+===================================================== */
+$("btnDeleteAccount").onclick = async ()=>{
+  $("delHint").textContent = "";
+
+  if(!session.httpToken){
+    toast("缺少 http_token：注销需要鉴权", "err");
+    $("delHint").textContent = "缺少 http_token";
+    return;
+  }
+  if(!session.pwSaltB64 || !session.pwIterations){
+    toast("缺少登录 challenge 的 salt/iterations：无法算 passwordHash", "err");
+    $("delHint").textContent = "缺少 challenge 参数";
+    return;
+  }
+
+  const pw = $("delPw").value;
+  const confirm = ($("delConfirm").value || "").trim();
+
+  if(!pw){
+    toast("请输入密码确认", "warn");
+    return;
+  }
+  if(confirm !== "DELETE"){
+    toast("二次确认需要输入 DELETE", "warn");
+    return;
+  }
+
+  try{
+    $("delHint").textContent = "处理中…";
+
+    const saltBytes = base64ToBytes(session.pwSaltB64);
+    const hashBytes = await derivePasswordHash(pw, saltBytes, Number(session.pwIterations));
+
+    const passwordHash = {
+      kdf: "PBKDF2-HMAC-SHA256",
+      iterations: Number(session.pwIterations),
+      salt: session.pwSaltB64,
+      hash: bufToBase64(hashBytes)
+    };
+
+    const r = await authedFetch("/api/user", {
+      method: "DELETE",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({ passwordHash })
+    });
+
+    const j = await readJsonSafe(r);
+
+    if(!r.ok){
+      toast("注销失败：HTTP " + r.status, "err");
+      $("delHint").textContent = "HTTP " + r.status;
+      return;
+    }
+    if(!j || !j.success){
+      toast("注销失败：" + ((j && j.error) ? j.error : "未知错误"), "err");
+      $("delHint").textContent = (j && j.error) ? j.error : "未知错误";
+      return;
+    }
+
+    toast("账号已注销（本地将退出）", "ok");
+
+    // 本地退出 + 清内存 + 回登录
+    closeWS();
+    wipeSensitiveMemory();
+    pendingLogin = null;
+    backToLogin();
+    setStatus("");
+
+    // 清理 UI 输入
+    $("delPw").value = "";
+    $("delConfirm").value = "";
+    $("panelDelete").open = false;
+
+    connectWS();
+
+  }catch(e){
+    console.error(e);
+    toast("注销失败（异常）", "err");
+    $("delHint").textContent = "异常";
+  } finally {
+    setTimeout(()=> { if($("delHint").textContent==="成功") $("delHint").textContent=""; }, 2200);
+  }
+};
 
 /* =====================================================
    页面加载：自动连接 WS
