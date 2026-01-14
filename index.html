@@ -598,6 +598,26 @@ let session = {
 /* =====================================================
    小工具
 ===================================================== */
+async function fetchPasswordParams(){
+  if(!session.httpToken) throw new Error("no http token");
+
+  const r = await fetch(HTTP_BASE + "/api/user/password_params", {
+    method: "GET",
+    headers: {
+      "Authorization": "Bearer " + session.httpToken
+    }
+  });
+
+  if(!r.ok) throw new Error("http " + r.status);
+
+  const j = await r.json();
+  if(!j.success || !j.passwordHash)
+    throw new Error("invalid response");
+
+  return j.passwordHash; 
+  // { kdf, iterations, salt }
+}
+
 function $(id){ return document.getElementById(id); }
 
 function setStatus(msg, isErr=false){
@@ -1163,60 +1183,46 @@ $("btnUploadAvatar").onclick = async ()=>{
 /* =====================================================
    改密码：生成 newPasswordHash + newEncryptedPrivateKey
 ===================================================== */
-$("btnChangePassword").onclick = async ()=>{
-  $("pwHint").textContent = "";
+document.getElementById("btnChangePassword").onclick = async ()=>{
+  const oldPw = document.getElementById("oldPw").value;
+  const newPw = document.getElementById("newPw").value;
+  const newPw2 = document.getElementById("newPw2").value;
 
-  if(!session.httpToken){
-    toast("缺少 http_token：改密码需要鉴权", "err");
-    $("pwHint").textContent = "缺少 http_token";
-    return;
-  }
-  if(!session.privateKeyPkcs8Bytes){
-    toast("本地没有私钥（内存）：无法重新加密", "err");
-    $("pwHint").textContent = "缺少私钥";
-    return;
-  }
-  if(!session.pwSaltB64 || !session.pwIterations){
-    toast("缺少登录 challenge 的 salt/iterations：无法算 oldPasswordHash", "err");
-    $("pwHint").textContent = "缺少 challenge 参数";
-    return;
-  }
+  if(!oldPw || !newPw || !newPw2)
+    return toast("请填写完整", "warn");
 
-  const oldPw = $("oldPw").value;
-  const newPw = $("newPw").value;
-  const newPw2 = $("newPw2").value;
+  if(newPw !== newPw2)
+    return toast("两次新密码不一致", "warn");
 
-  if(!oldPw || !newPw || !newPw2){
-    toast("请把旧密码/新密码填完整", "warn");
-    return;
-  }
-  if(newPw !== newPw2){
-    toast("两次新密码不一致", "warn");
-    return;
-  }
-  if(newPw.length < 8){
-    toast("新密码建议至少 8 位", "warn");
-  }
+  if(!session.privateKeyPkcs8Bytes)
+    return toast("本地没有私钥，无法改密码", "err");
 
   try{
-    $("pwHint").textContent = "计算中…";
+    toast("获取密码参数中…", "warn");
 
-    // oldPasswordHash（使用登录 challenge 的 salt/iter）
-    const oldSaltBytes = base64ToBytes(session.pwSaltB64);
-    const oldHashBytes = await derivePasswordHash(oldPw, oldSaltBytes, Number(session.pwIterations));
+    /* 1️⃣ 获取 password hash 参数 */
+    const pwParams = await fetchPasswordParams();
+    const oldSaltBytes = base64ToBytes(pwParams.salt);
+    const oldIter = Number(pwParams.iterations);
+
+    /* 2️⃣ 计算 oldPasswordHash */
+    const oldHashBytes =
+      await derivePasswordHash(oldPw, oldSaltBytes, oldIter);
 
     const oldPasswordHash = {
-      kdf: "PBKDF2-HMAC-SHA256",
-      iterations: Number(session.pwIterations),
-      salt: session.pwSaltB64,
+      kdf: pwParams.kdf,
+      iterations: oldIter,
+      salt: pwParams.salt,
       hash: bufToBase64(oldHashBytes)
     };
 
-    // newPasswordHash（生成新 salt）
+    /* 3️⃣ 生成 newPasswordHash */
     const newSaltBytes = getRandomBytes(16);
     const newSaltB64 = bufToBase64(newSaltBytes);
-    const newIter = PBKDF2_ITER_PWHASH;
-    const newHashBytes = await derivePasswordHash(newPw, newSaltBytes, newIter);
+    const newIter = 300000; // ← 你可以在这里升级安全强度
+
+    const newHashBytes =
+      await derivePasswordHash(newPw, newSaltBytes, newIter);
 
     const newPasswordHash = {
       kdf: "PBKDF2-HMAC-SHA256",
@@ -1225,68 +1231,64 @@ $("btnChangePassword").onclick = async ()=>{
       hash: bufToBase64(newHashBytes)
     };
 
-    // newEncryptedPrivateKey（用 newPw 派生 AES key，再加密 pkcs8）
-    const keySaltBytes = getRandomBytes(16);
-    const keySaltB64 = bufToBase64(keySaltBytes);
-    const keyIter = PBKDF2_ITER_KEY_DEFAULT;
+    /* 4️⃣ 用新密码重新加密私钥 */
+    const keySalt = getRandomBytes(16);
+    const iv = getRandomBytes(12);
 
-    const ivBytes = getRandomBytes(12);
-    const ivB64 = bufToBase64(ivBytes);
+    const aesKey = await deriveAesKey(
+      newPw,
+      keySalt,
+      PBKDF2_ITER_KEY_DEFAULT,
+      ["encrypt"]
+    );
 
-    const aesEncKey = await deriveAesKey(newPw, keySaltBytes, keyIter, ["encrypt"]);
-    const ctBytes = await encryptPrivateKey(aesEncKey, ivBytes, session.privateKeyPkcs8Bytes);
+    const ct = await encryptPrivateKey(
+      aesKey,
+      iv,
+      session.privateKeyPkcs8Bytes
+    );
 
     const newEncryptedPrivateKey = {
       kdf: "PBKDF2-HMAC-SHA256",
-      iterations: keyIter,
-      salt: keySaltB64,
+      iterations: PBKDF2_ITER_KEY_DEFAULT,
+      salt: bufToBase64(keySalt),
       cipher: "AES-256-GCM",
-      iv: ivB64,
-      ciphertext: bufToBase64(ctBytes)
+      iv: bufToBase64(iv),
+      ciphertext: bufToBase64(ct)
     };
 
-    // 发给后端
-    const r = await authedFetch("/api/user/password", {
+    /* 5️⃣ 提交给服务器 */
+    toast("提交改密码请求…", "warn");
+
+    const r = await fetch(HTTP_BASE + "/api/user/password", {
       method: "POST",
-      headers: { "Content-Type":"application/json" },
-      body: JSON.stringify({ oldPasswordHash, newPasswordHash, newEncryptedPrivateKey })
+      headers: {
+        "Authorization": "Bearer " + session.httpToken,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        oldPasswordHash,
+        newPasswordHash,
+        newEncryptedPrivateKey
+      })
     });
 
-    const j = await readJsonSafe(r);
+    const j = await r.json();
+    if(!r.ok || !j.success)
+      throw new Error(j?.error || "change password failed");
 
-    if(!r.ok){
-      toast("改密码失败：HTTP " + r.status, "err");
-      $("pwHint").textContent = "HTTP " + r.status;
-      return;
-    }
-    if(!j || !j.success){
-      toast("改密码失败：" + ((j && j.error) ? j.error : "未知错误"), "err");
-      $("pwHint").textContent = (j && j.error) ? j.error : "未知错误";
-      return;
-    }
+    toast("密码修改成功（私钥已重新加密）", "ok");
 
-    // 改密码成功：更新 session 的 challenge 参数为“新密码 hash 的 salt/iter”
-    session.pwSaltB64 = newPasswordHash.salt;
-    session.pwIterations = newPasswordHash.iterations;
-
-    // 由于你不保存密码，这里不更新任何“password”，只提示用户下次登录用新密码
-    toast("改密码成功（私钥已重新加密）", "ok");
-    $("pwHint").textContent = "成功";
-    $("oldPw").value = "";
-    $("newPw").value = "";
-    $("newPw2").value = "";
-
-    // 收起 panel
-    $("panelPassword").open = false;
+    document.getElementById("oldPw").value = "";
+    document.getElementById("newPw").value = "";
+    document.getElementById("newPw2").value = "";
 
   }catch(e){
     console.error(e);
-    toast("改密码失败（异常）", "err");
-    $("pwHint").textContent = "异常";
-  } finally {
-    setTimeout(()=> { if($("pwHint").textContent==="成功") $("pwHint").textContent=""; }, 2200);
+    toast("改密码失败：" + e.message, "err");
   }
 };
+
 
 /* =====================================================
    注销账号
