@@ -1117,8 +1117,15 @@ $("btnSaveProfile").onclick = async ()=>{
     }
 
     session.displayName = j.display_name ?? name;
-    toast("昵称已保存", "ok");
-    $("profileHint").textContent = "已保存";
+    /* ===== 新增：立刻同步 UI ===== */
+$("homeUser").textContent =
+  "用户：" + (session.displayName || session.username);
+
+$("displayName").value = session.displayName;
+/* ============================ */
+
+toast("昵称已保存", "ok");
+$("profileHint").textContent = "已保存";
     setTimeout(()=> $("profileHint").textContent="", 2000);
 
   }catch(e){
