@@ -1308,11 +1308,6 @@ $("btnDeleteAccount").onclick = async ()=>{
     $("delHint").textContent = "缺少 http_token";
     return;
   }
-  if(!session.pwSaltB64 || !session.pwIterations){
-    toast("缺少登录 challenge 的 salt/iterations：无法算 passwordHash", "err");
-    $("delHint").textContent = "缺少 challenge 参数";
-    return;
-  }
 
   const pw = $("delPw").value;
   const confirm = ($("delConfirm").value || "").trim();
@@ -1327,18 +1322,28 @@ $("btnDeleteAccount").onclick = async ()=>{
   }
 
   try{
-    $("delHint").textContent = "处理中…";
+    toast("获取密码参数中…", "warn");
+    $("delHint").textContent = "获取参数…";
 
-    const saltBytes = base64ToBytes(session.pwSaltB64);
-    const hashBytes = await derivePasswordHash(pw, saltBytes, Number(session.pwIterations));
+    /* 1️⃣ 实时获取 password hash 参数（关键修正点） */
+    const pwParams = await fetchPasswordParams();
+    const iter = Number(pwParams.iterations);
+    const saltBytes = base64ToBytes(pwParams.salt);
+
+    /* 2️⃣ 计算 passwordHash */
+    const hashBytes = await derivePasswordHash(pw, saltBytes, iter);
 
     const passwordHash = {
-      kdf: "PBKDF2-HMAC-SHA256",
-      iterations: Number(session.pwIterations),
-      salt: session.pwSaltB64,
+      kdf: pwParams.kdf,
+      iterations: iter,
+      salt: pwParams.salt,
       hash: bufToBase64(hashBytes)
     };
 
+    toast("提交注销请求…", "warn");
+    $("delHint").textContent = "提交请求…";
+
+    /* 3️⃣ 提交注销请求 */
     const r = await authedFetch("/api/user", {
       method: "DELETE",
       headers: { "Content-Type":"application/json" },
@@ -1347,41 +1352,33 @@ $("btnDeleteAccount").onclick = async ()=>{
 
     const j = await readJsonSafe(r);
 
-    if(!r.ok){
-      toast("注销失败：HTTP " + r.status, "err");
-      $("delHint").textContent = "HTTP " + r.status;
-      return;
-    }
-    if(!j || !j.success){
-      toast("注销失败：" + ((j && j.error) ? j.error : "未知错误"), "err");
-      $("delHint").textContent = (j && j.error) ? j.error : "未知错误";
-      return;
+    if(!r.ok || !j || !j.success){
+      throw new Error(j?.error || "delete account failed");
     }
 
     toast("账号已注销（本地将退出）", "ok");
 
-    // 本地退出 + 清内存 + 回登录
+    /* 4️⃣ 本地清理 + 回登录页 */
     closeWS();
     wipeSensitiveMemory();
     pendingLogin = null;
-    backToLogin();
-    setStatus("");
 
-    // 清理 UI 输入
     $("delPw").value = "";
     $("delConfirm").value = "";
     $("panelDelete").open = false;
+
+    backToLogin();
+    setStatus("");
 
     connectWS();
 
   }catch(e){
     console.error(e);
-    toast("注销失败（异常）", "err");
-    $("delHint").textContent = "异常";
-  } finally {
-    setTimeout(()=> { if($("delHint").textContent==="成功") $("delHint").textContent=""; }, 2200);
+    toast("注销失败：" + e.message, "err");
+    $("delHint").textContent = "失败";
   }
 };
+
 
 /* =====================================================
    页面加载：自动连接 WS
