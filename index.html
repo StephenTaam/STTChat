@@ -383,155 +383,206 @@
     </div>
   </div>
 
-  <!-- ========== 主页视图 ========== -->
-  <div id="viewHome" class="hidden">
-    <div class="brandbar">
-      <div class="brand">
-        <div class="logo"></div>
-        <div>
-          <h1>设置</h1>
-          <div class="sub">Profile · Security · Danger Zone</div>
-        </div>
-      </div>
-
-      <div class="row">
-        <span class="pill" title="WebSocket 状态">
-          <span id="wsDotHome" class="dot bad"></span>
-          <span id="homeWs">WS：-</span>
-        </span>
-        <button class="btn" id="btnLogout" type="button">退出</button>
+  <!-- ========== 主页视图（完整覆盖版） ========== -->
+<div id="viewHome" class="hidden">
+  <div class="brandbar">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <h1>STTChat</h1>
+        <div class="sub">端到端加密 · 聊天密钥仅存在内存</div>
       </div>
     </div>
 
-    <div class="grid">
-      <!-- Left: Profile -->
-      <div class="card">
-        <div class="title">
-          <h2>个人资料</h2>
-          <span class="hint">头像 / 昵称</span>
-        </div>
-
-        <div class="row" style="align-items: center; gap: 14px;">
-          <img id="avatarImg" class="avatar" alt="avatar">
-          <div style="flex:1; min-width: 220px;">
-            <div class="row" style="justify-content: space-between;">
-              <span class="pill" id="homeUser">用户：-</span>
-              <span class="pill" id="homeKey">私钥：-</span>
-            </div>
-            <div class="muted" style="margin-top:8px;">
-              私钥只在内存中；退出会清空并断开 WS。
-            </div>
-          </div>
-        </div>
-
-        <div class="sep"></div>
-
-        <label>
-          昵称（display_name）
-          <input id="displayName" type="text" placeholder="比如：StephenTaam" maxlength="32">
-        </label>
-        <div class="row" style="margin-top:10px;">
-          <button class="btn primary" id="btnSaveProfile" type="button">保存昵称</button>
-          <span class="muted" id="profileHint"></span>
-        </div>
-
-        <div class="sep"></div>
-
-        <label>
-          修改头像
-          <input type="file" id="avatarFile" accept="image/*">
-        </label>
-        <div class="row" style="margin-top:10px;">
-          <button class="btn" id="btnUploadAvatar" type="button">上传头像</button>
-          <span class="muted" id="avatarHint"></span>
-        </div>
-      </div>
-
-      <!-- Right: Security + Danger -->
-      <div class="card soft">
-        <div class="title">
-          <h2>安全</h2>
-          <span class="hint">改密码会重新加密私钥</span>
-        </div>
-
-        <details id="panelPassword">
-          <summary>
-            改密码
-            <span class="caret">▾</span>
-          </summary>
-
-          <div class="muted" style="margin-top:10px;">
-            改密码需要：
-            <ul style="margin:6px 0 0 18px; padding:0;">
-              <li>用旧密码校验 oldPasswordHash</li>
-              <li>用新密码生成 newPasswordHash</li>
-              <li>用新密码派生 AES key 重新加密私钥并提交</li>
-            </ul>
-          </div>
-
-          <label>
-            旧密码
-            <input id="oldPw" type="password" autocomplete="current-password" placeholder="输入旧密码">
-          </label>
-          <label>
-            新密码
-            <input id="newPw" type="password" autocomplete="new-password" placeholder="输入新密码（建议 10+ 位）">
-          </label>
-          <label>
-            确认新密码
-            <input id="newPw2" type="password" autocomplete="new-password" placeholder="再次输入新密码">
-          </label>
-
-          <div class="row" style="margin-top:10px;">
-            <button class="btn primary" id="btnChangePassword" type="button">提交改密码</button>
-            <span class="muted" id="pwHint"></span>
-          </div>
-        </details>
-
-        <div class="sep"></div>
-
-        <div class="title">
-          <h2 style="color: rgba(255,255,255,.9);">Danger Zone</h2>
-          <span class="hint" style="color: rgba(255,255,255,.55);">不可恢复</span>
-        </div>
-
-        <details id="panelDelete">
-          <summary>
-            注销账号（永久删除）
-            <span class="caret">▾</span>
-          </summary>
-
-          <div class="muted" style="margin-top:10px;">
-            这是危险操作：会删除你的账号数据。建议你要求用户输入密码再次确认。
-          </div>
-
-          <label>
-            输入密码确认
-            <input id="delPw" type="password" autocomplete="current-password" placeholder="输入当前密码">
-          </label>
-
-          <label>
-            二次确认（输入 DELETE）
-            <input id="delConfirm" type="text" placeholder="DELETE">
-          </label>
-
-          <div class="row" style="margin-top:10px;">
-            <button class="btn danger" id="btnDeleteAccount" type="button">我确认注销账号</button>
-            <span class="muted" id="delHint"></span>
-          </div>
-        </details>
-
-        <div class="sep"></div>
-        <div class="muted">
-          连接信息：
-          <div class="row" style="margin-top:8px; gap:8px;">
-            <span class="pill" id="pillHttp">HTTP：-</span>
-            <span class="pill" id="pillWs">WS：-</span>
-          </div>
-        </div>
-      </div>
+    <div class="row">
+      <span class="pill" title="WebSocket 状态">
+        <span id="wsDotHome" class="dot bad"></span>
+        <span id="homeWs">WS：-</span>
+      </span>
+      <button class="btn" id="btnLogout" type="button">退出</button>
     </div>
   </div>
+
+  <div class="grid" style="grid-template-columns: 1.6fr .8fr;">
+
+    <!-- ================== 左侧：聊天 ================== -->
+    <div class="card">
+      <div class="title">
+        <h2>聊天</h2>
+        <span class="hint">ECDH → AES-256-GCM（服务端仅转发）</span>
+      </div>
+
+      <div class="row" style="gap:12px; align-items: stretch;">
+
+        <!-- ===== Sidebar ===== -->
+        <div style="width:240px; min-width:220px;">
+          <div class="muted">打开 / 创建会话</div>
+
+          <label style="margin-top:8px;">
+            对方用户名
+            <input id="peerInput" type="text" placeholder="例如：Alice">
+          </label>
+
+          <div class="row" style="margin-top:10px;">
+            <button class="btn primary" id="btnOpenChat" type="button">打开会话</button>
+            <button class="btn" id="btnRefreshKey" type="button">刷新公钥</button>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="muted" style="margin-bottom:8px;">会话列表</div>
+          <div id="convList"
+               style="display:flex; flex-direction:column; gap:8px;">
+          </div>
+
+          <div class="sep"></div>
+          <div class="muted" id="chatHint">
+            提示：首次会话会拉取对方公钥并派生会话密钥
+          </div>
+        </div>
+
+        <!-- ===== Chat Panel ===== -->
+        <div style="flex:1; min-width:260px; display:flex; flex-direction:column;">
+
+          <div class="row" style="justify-content:space-between;">
+            <span class="pill" id="chatWith">当前：-</span>
+            <span class="pill" id="chatKeyState">会话密钥：-</span>
+          </div>
+
+          <div class="sep"></div>
+
+          <div id="msgList"
+               style="
+                 flex:1;
+                 min-height:320px;
+                 max-height:520px;
+                 overflow:auto;
+                 padding-right:6px;
+                 display:flex;
+                 flex-direction:column;
+                 gap:10px;">
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="row" style="gap:10px; align-items:flex-end;">
+            <div style="flex:1;">
+              <label style="margin-top:0;">
+                输入消息
+                <input id="msgInput"
+                       type="text"
+                       placeholder="Enter 发送">
+              </label>
+            </div>
+            <button class="btn primary" id="btnSendMsg" type="button">
+              发送
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ================== 右侧：设置 ================== -->
+    <div class="card soft">
+      <div class="title">
+        <h2>设置</h2>
+        <span class="hint">Profile · Security · Danger</span>
+      </div>
+
+      <!-- ===== 个人资料 ===== -->
+      <div class="row" style="align-items:center; gap:14px;">
+        <img id="avatarImg" class="avatar" alt="avatar">
+        <div style="flex:1;">
+          <div class="row" style="justify-content:space-between;">
+            <span class="pill" id="homeUser">用户：-</span>
+            <span class="pill" id="homeKey">私钥：-</span>
+          </div>
+          <div class="muted" style="margin-top:8px;">
+            私钥仅存在内存，退出即清空
+          </div>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <label>
+        昵称（display_name）
+        <input id="displayName" type="text" maxlength="32">
+      </label>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn primary" id="btnSaveProfile" type="button">保存昵称</button>
+        <span class="muted" id="profileHint"></span>
+      </div>
+
+      <div class="sep"></div>
+
+      <label>
+        修改头像
+        <input type="file" id="avatarFile" accept="image/*">
+      </label>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn" id="btnUploadAvatar" type="button">上传头像</button>
+        <span class="muted" id="avatarHint"></span>
+      </div>
+
+      <div class="sep"></div>
+
+      <!-- ===== 改密码 ===== -->
+      <details id="panelPassword">
+        <summary>改密码 <span class="caret">▾</span></summary>
+
+        <label>旧密码
+          <input id="oldPw" type="password">
+        </label>
+        <label>新密码
+          <input id="newPw" type="password">
+        </label>
+        <label>确认新密码
+          <input id="newPw2" type="password">
+        </label>
+
+        <div class="row" style="margin-top:10px;">
+          <button class="btn primary" id="btnChangePassword">提交改密码</button>
+          <span class="muted" id="pwHint"></span>
+        </div>
+      </details>
+
+      <div class="sep"></div>
+
+      <!-- ===== 注销账号 ===== -->
+      <details id="panelDelete">
+        <summary>注销账号（不可恢复） <span class="caret">▾</span></summary>
+
+        <label>输入密码确认
+          <input id="delPw" type="password">
+        </label>
+        <label>二次确认（DELETE）
+          <input id="delConfirm" type="text">
+        </label>
+
+        <div class="row" style="margin-top:10px;">
+          <button class="btn danger" id="btnDeleteAccount">
+            我确认注销账号
+          </button>
+          <span class="muted" id="delHint"></span>
+        </div>
+      </details>
+
+      <div class="sep"></div>
+
+      <div class="muted">
+        连接信息：
+        <div class="row" style="margin-top:8px; gap:8px;">
+          <span class="pill" id="pillHttp">HTTP：-</span>
+          <span class="pill" id="pillWs">WS：-</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 
 </div>
 
@@ -584,6 +635,23 @@ let session = {
   avatarUrl : null,
   httpToken : null,
 
+  /* =========================
+   Chat state（仅内存）
+========================= */
+let chatState = {
+  currentPeer: null,
+  messages: new Map(),      // peer -> [{id, dir, text, ts, status}]
+  sessionKeys: new Map()    // peer -> CryptoKey(AES)
+};
+
+function getPeerMsgs(peer){
+  if(!chatState.messages.has(peer)){
+    chatState.messages.set(peer, []);
+  }
+  return chatState.messages.get(peer);
+}
+
+
   // 登录 challenge 的 password hash 参数（后续改密码/注销用）
   pwSaltB64: null,
   pwIterations: null,
@@ -598,6 +666,56 @@ let session = {
 /* =====================================================
    小工具
 ===================================================== */
+/* =========================
+   Chat crypto (ECDH → AES)
+========================= */
+
+async function importPeerPublicKey(spkiB64){
+  return crypto.subtle.importKey(
+    "spki",
+    base64ToBytes(spkiB64),
+    { name:"ECDH", namedCurve:"P-256" },
+    true,
+    []
+  );
+}
+
+async function deriveSessionKey(myPrivKey, peerPubKey){
+  const bits = await crypto.subtle.deriveBits(
+    { name:"ECDH", public: peerPubKey },
+    myPrivKey,
+    256
+  );
+  return crypto.subtle.importKey(
+    "raw",
+    bits,
+    { name:"AES-GCM" },
+    false,
+    ["encrypt","decrypt"]
+  );
+}
+
+async function ensureSessionKey(peer){
+  if(chatState.sessionKeys.has(peer))
+    return chatState.sessionKeys.get(peer);
+
+  // HTTP 拉对方公钥
+  const r = await authedFetch(
+    "/api/user/public_key?username=" + encodeURIComponent(peer)
+  );
+  const j = await r.json();
+  if(!j.success) throw new Error("no public key");
+
+  const peerPub = await importPeerPublicKey(j.public_key.spki);
+  const aesKey  = await deriveSessionKey(
+    session.privateKeyCryptoKey,
+    peerPub
+  );
+
+  chatState.sessionKeys.set(peer, aesKey);
+  return aesKey;
+}
+
 async function fetchPasswordParams(){
   if(!session.httpToken) throw new Error("no http token");
 
@@ -829,7 +947,18 @@ function connectWS(){
       await handleLoginResult(msg);
       return;
     }
+    
     // 其他消息
+    if (msg.type === "msg_push") {
+    await onMsgPush(msg);
+    return;
+  }
+
+  if (msg.type === "msg_ack") {
+    // 你可以简单不处理，或标记 delivered
+    return;
+  }
+
   };
 }
 
@@ -1378,6 +1507,85 @@ $("btnDeleteAccount").onclick = async ()=>{
     $("delHint").textContent = "失败";
   }
 };
+/* =========================
+   Send chat message
+========================= */
+async function sendChatMessage(){
+  const peer = chatState.currentPeer;
+  if(!peer) return toast("先选择会话", "warn");
+
+  const input = $("msgInput");
+  const text = input.value.trim();
+  if(!text) return;
+
+  const aesKey = await ensureSessionKey(peer);
+  const iv = getRandomBytes(12);
+
+  const ctBuf = await crypto.subtle.encrypt(
+    { name:"AES-GCM", iv },
+    aesKey,
+    strToUint8(text)
+  );
+
+  const msgId = crypto.randomUUID();
+  const ts = Math.floor(Date.now()/1000);
+
+  // 本地先显示
+  getPeerMsgs(peer).push({
+    id: msgId,
+    dir: "out",
+    text,
+    ts,
+    status: "sent"
+  });
+  renderMessages(peer);
+
+  await sendJson({
+    type: "msg_send",
+    msg: {
+      msg_id: msgId,
+      to: peer,
+      cipher: "AES-256-GCM",
+      iv: bufToBase64(iv),
+      ciphertext: bufToBase64(new Uint8Array(ctBuf)),
+      ts
+    }
+  });
+
+  input.value = "";
+}
+$("btnSendMsg").onclick = sendChatMessage;
+/* =========================
+   Receive chat message
+========================= */
+async function onMsgPush(msg){
+  const m = msg.msg;
+  const peer = m.from;
+
+  const aesKey = await ensureSessionKey(peer);
+  const ptBuf = await crypto.subtle.decrypt(
+    { name:"AES-GCM", iv: base64ToBytes(m.iv) },
+    aesKey,
+    base64ToBytes(m.ciphertext)
+  );
+
+  const text = new TextDecoder().decode(ptBuf);
+
+  getPeerMsgs(peer).push({
+    id: m.msg_id,
+    dir: "in",
+    text,
+    ts: m.ts,
+    status: ""
+  });
+
+  if(chatState.currentPeer === peer){
+    renderMessages(peer);
+  }
+
+  // ACK
+  await sendJson({ type:"msg_ack", msg_id: m.msg_id });
+}
 
 
 /* =====================================================
