@@ -635,7 +635,20 @@ let session = {
   avatarUrl : null,
   httpToken : null,
 
-  /* =========================
+
+
+  // 登录 challenge 的 password hash 参数（后续改密码/注销用）
+  pwSaltB64: null,
+  pwIterations: null,
+
+  // 解密出的私钥（只在内存）
+  privateKeyPkcs8Bytes: null,  // Uint8Array
+  privateKeyCryptoKey: null,   // CryptoKey（可选）
+  publicKeySpkiBytes: null,    // Uint8Array（可选）
+  publicKeyCryptoKey: null
+};
+
+/* =========================
    Chat state（仅内存）
 ========================= */
 let chatState = {
@@ -650,18 +663,6 @@ function getPeerMsgs(peer){
   }
   return chatState.messages.get(peer);
 }
-
-
-  // 登录 challenge 的 password hash 参数（后续改密码/注销用）
-  pwSaltB64: null,
-  pwIterations: null,
-
-  // 解密出的私钥（只在内存）
-  privateKeyPkcs8Bytes: null,  // Uint8Array
-  privateKeyCryptoKey: null,   // CryptoKey（可选）
-  publicKeySpkiBytes: null,    // Uint8Array（可选）
-  publicKeyCryptoKey: null
-};
 
 /* =====================================================
    小工具
