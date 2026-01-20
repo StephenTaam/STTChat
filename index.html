@@ -325,6 +325,55 @@
   align-items:center;
   margin-bottom: 12px;
 }
+/* ===== IM Layout ===== */
+.im-layout{
+  display:flex;
+  height: 460px;
+}
+
+.im-sidebar{
+  width: 260px;
+  border-right: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  display:flex;
+  flex-direction: column;
+}
+
+.im-sidebar-header{
+  padding: 10px;
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  font-weight:700;
+}
+
+.im-list{
+  flex:1;
+  overflow-y:auto;
+}
+
+.im-item{
+  padding: 10px;
+  cursor:pointer;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.im-item:hover{
+  background: rgba(255,255,255,.06);
+}
+.im-item.active{
+  background: rgba(59,130,246,.18);
+}
+
+.im-main{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.im-placeholder{
+  color: var(--muted);
+}
 
 </style>
 </head>
@@ -446,16 +495,35 @@
     </div>
   </div>
 
-  <!-- IM 主区域（现在是占位，未来直接换成聊天 UI） -->
-  <div class="card"
-       style="height: 460px; display:flex; align-items:center; justify-content:center;">
-    <div class="muted" style="text-align:center;">
-      IM 即将上线 🚀<br>
-      <br>
-      这里将是：<br>
-      会话列表 / 聊天窗口 / 消息流
+  <!-- IM 主区域 -->
+  <div class="card" style="padding:0; overflow:hidden;">
+    <div class="im-layout">
+  
+      <!-- 左侧：好友 / 会话列表 -->
+      <div class="im-sidebar">
+        <div class="im-sidebar-header">
+          <span>好友</span>
+          <button class="btn ghost" id="btnAddFriend">＋</button>
+        </div>
+      
+        <div id="friendList" class="im-list"></div>
+      
+        <div class="sep"></div>
+        <div class="muted" style="padding:8px;">好友请求</div>
+        <div id="requestList" class="im-list"></div>
+      </div>
+      
+  
+      <!-- 右侧：聊天区 -->
+      <div class="im-main">
+        <div class="im-placeholder">
+          选择一个好友开始聊天
+        </div>
+      </div>
+  
     </div>
   </div>
+  
 
 </div>
 
@@ -646,6 +714,12 @@ function escapeHtml(s){
 /* =====================================================
    全局状态（只放内存）
 ===================================================== */
+let friendRequests = []; // [{username, display_name}]
+const sessionKeys = new Map(); // peer -> CryptoKey
+
+let friends = []; // [{username, display_name, avatar_url}]
+let currentChat = null;
+
 let reconnectTimer = null;
 let reconnectDelay = 3000;
 let ws = null;
@@ -903,6 +977,14 @@ function connectWS(){
       return;
     }
     // 其他消息
+    if (msg.type === "chat_recv") {
+  handleIncomingMessage(msg);
+}
+if (msg.type === "friend_request") {
+  toast("收到好友请求", "warn");
+  loadFriends();
+}
+
   };
 }
 
@@ -1071,6 +1153,8 @@ function enterHome(){
 
   updateHomeBadges();
   updateConnPills();
+  loadFriends();
+
 }
 
 function updateHomeBadges(){
@@ -1464,6 +1548,133 @@ $("btnCloseSettings").onclick = ()=>{
 drawer.querySelector(".settings-mask").onclick = ()=>{
   drawer.classList.add("hidden");
 };
+async function loadFriends(){
+  const r = await authedFetch("/api/friends");
+  const j = await readJsonSafe(r);
+
+  if(!r.ok || !j.success){
+    toast("好友列表加载失败", "err");
+    return;
+  }
+
+  friends = j.friends || [];
+  friendRequests = j.requests || [];
+
+  renderFriendList();
+  renderRequestList();
+}
+
+
+function renderFriendList(){
+  const box = document.getElementById("friendList");
+  box.innerHTML = "";
+
+  for(const f of friends){
+    const div = document.createElement("div");
+    div.className = "im-item";
+    div.textContent = f.display_name || f.username;
+    div.onclick = ()=> selectFriend(f);
+    box.appendChild(div);
+  }
+}
+
+function selectFriend(f){
+  currentChat = f;
+  document.querySelectorAll(".im-item").forEach(el=>el.classList.remove("active"));
+  event.currentTarget.classList.add("active");
+
+  document.querySelector(".im-main").innerHTML = `
+    <div class="muted">与 ${escapeHtml(f.display_name || f.username)} 的聊天（待实现）</div>
+  `;
+}
+document.getElementById("btnAddFriend").onclick = async ()=>{
+  const name = prompt("输入对方用户名");
+  if(!name) return;
+
+  const r = await authedFetch("/api/friends/request", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ username: name })
+  });
+
+  if(!r.ok){
+    toast("请求失败", "err");
+    return;
+  }
+  toast("好友请求已发送", "ok");
+};
+
+function renderRequestList(){
+  const box = document.getElementById("requestList");
+  box.innerHTML = "";
+
+  for(const r of friendRequests){
+    const div = document.createElement("div");
+    div.className = "im-item";
+
+    div.innerHTML = `
+      <div>${escapeHtml(r.display_name || r.username)}</div>
+      <div class="row" style="margin-top:6px;">
+        <button class="btn primary btn-sm">同意</button>
+        <button class="btn danger btn-sm">拒绝</button>
+      </div>
+    `;
+
+    div.querySelector(".btn.primary").onclick =
+      ()=>acceptFriend(r.username);
+    div.querySelector(".btn.danger").onclick =
+      ()=>rejectFriend(r.username);
+
+    box.appendChild(div);
+  }
+}
+async function deriveSessionKey(peerSpkiB64){
+  const peerKey = await crypto.subtle.importKey(
+    "spki",
+    base64ToBytes(peerSpkiB64),
+    { name:"ECDH", namedCurve:"P-256" },
+    false,
+    []
+  );
+
+  return await crypto.subtle.deriveKey(
+    { name:"ECDH", public: peerKey },
+    session.privateKeyCryptoKey,
+    { name:"AES-GCM", length:256 },
+    false,
+    ["encrypt","decrypt"]
+  );
+}
+async function acceptFriend(username){
+  const r = await authedFetch("/api/friends/accept", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ username })
+  });
+
+  const j = await readJsonSafe(r);
+  if(!r.ok || !j.success){
+    toast("同意失败", "err");
+    return;
+  }
+
+  const key = await deriveSessionKey(j.public_key.spki);
+  sessionKeys.set(username, key);
+
+  toast("好友已添加", "ok");
+  loadFriends();
+}
+
+async function rejectFriend(username){
+  await authedFetch("/api/friends/reject", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ username })
+  });
+
+  toast("已拒绝", "ok");
+  loadFriends();
+}
 
 
 /* =====================================================
