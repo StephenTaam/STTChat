@@ -520,10 +520,88 @@
       </div>
     </div>
 
-    <!-- ===== Security + Danger（原样） ===== -->
-    <div class="card soft" style="margin-top:14px;">
-      <!-- 这里直接把你原来的 安全 / 改密码 / 注销 那一整块粘进来 -->
-      <!-- id 不变，JS 全部还能用 -->
+    <!-- Right: Security + Danger -->
+    <div class="card soft">
+      <div class="title">
+        <h2>安全</h2>
+        <span class="hint">改密码会重新加密私钥</span>
+      </div>
+
+      <details id="panelPassword">
+        <summary>
+          改密码
+          <span class="caret">▾</span>
+        </summary>
+
+        <div class="muted" style="margin-top:10px;">
+          改密码需要：
+          <ul style="margin:6px 0 0 18px; padding:0;">
+            <li>用旧密码校验 oldPasswordHash</li>
+            <li>用新密码生成 newPasswordHash</li>
+            <li>用新密码派生 AES key 重新加密私钥并提交</li>
+          </ul>
+        </div>
+
+        <label>
+          旧密码
+          <input id="oldPw" type="password" autocomplete="current-password" placeholder="输入旧密码">
+        </label>
+        <label>
+          新密码
+          <input id="newPw" type="password" autocomplete="new-password" placeholder="输入新密码（建议 10+ 位）">
+        </label>
+        <label>
+          确认新密码
+          <input id="newPw2" type="password" autocomplete="new-password" placeholder="再次输入新密码">
+        </label>
+
+        <div class="row" style="margin-top:10px;">
+          <button class="btn primary" id="btnChangePassword" type="button">提交改密码</button>
+          <span class="muted" id="pwHint"></span>
+        </div>
+      </details>
+
+      <div class="sep"></div>
+
+      <div class="title">
+        <h2 style="color: rgba(255,255,255,.9);">Danger Zone</h2>
+        <span class="hint" style="color: rgba(255,255,255,.55);">不可恢复</span>
+      </div>
+
+      <details id="panelDelete">
+        <summary>
+          注销账号（永久删除）
+          <span class="caret">▾</span>
+        </summary>
+
+        <div class="muted" style="margin-top:10px;">
+          这是危险操作：会删除你的账号数据。建议你要求用户输入密码再次确认。
+        </div>
+
+        <label>
+          输入密码确认
+          <input id="delPw" type="password" autocomplete="current-password" placeholder="输入当前密码">
+        </label>
+
+        <label>
+          二次确认（输入 DELETE）
+          <input id="delConfirm" type="text" placeholder="DELETE">
+        </label>
+
+        <div class="row" style="margin-top:10px;">
+          <button class="btn danger" id="btnDeleteAccount" type="button">我确认注销账号</button>
+          <span class="muted" id="delHint"></span>
+        </div>
+      </details>
+
+      <div class="sep"></div>
+      <div class="muted">
+        连接信息：
+        <div class="row" style="margin-top:8px; gap:8px;">
+          <span class="pill" id="pillHttp">HTTP：-</span>
+          <span class="pill" id="pillWs">WS：-</span>
+        </div>
+      </div>
     </div>
 
   </div>
