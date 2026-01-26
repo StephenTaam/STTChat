@@ -1591,18 +1591,32 @@ document.getElementById("btnAddFriend").onclick = async ()=>{
   const name = prompt("输入对方用户名");
   if(!name) return;
 
-  const r = await authedFetch("/api/friends/request", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({ username: name })
-  });
-
-  if(!r.ok){
-    toast("请求失败", "err");
+  let r;
+  try{
+    r = await authedFetch("/api/friends/request", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ username: name })
+    });
+  }catch(e){
+    toast("network_error", "err");
     return;
   }
-  toast("好友请求已发送", "ok");
+
+  if(!r.ok){
+    toast("http_error", "err");
+    return;
+  }
+
+  const data = await r.json();
+
+  if(data.success){
+    toast(data.status || "ok", "ok");
+  }else{
+    toast(data.error || "unknown_error", "err");
+  }
 };
+
 
 function renderRequestList(){
   const box = document.getElementById("requestList");
