@@ -1578,15 +1578,50 @@ function renderFriendList(){
     div.innerHTML = `
       <div class="row" style="gap:10px;">
         <img src="${avatar}" style="width:36px;height:36px;border-radius:50%">
-        <div>${escapeHtml(f.display_name || f.username)}</div>
+        <div style="flex:1">${escapeHtml(f.display_name || f.username)}</div>
+        <button class="btn ghost btn-sm">⋮</button>
       </div>
     `;
 
-    div.onclick = (e)=> selectFriend(f, e);
+    div.onclick = (e)=>{
+      if(e.target.tagName === "BUTTON") return;
+      selectFriend(f, e);
+    };
+
+    // 删除好友
+    div.querySelector("button").onclick = ()=>{
+      deleteFriend(f.username);
+    };
 
     box.appendChild(div);
   }
 }
+
+async function deleteFriend(username){
+  if(!confirm("确定删除好友？聊天记录将保留在服务器（密文）")) return;
+
+  const r = await authedFetch("/api/friends", {
+    method: "DELETE",
+    headers: { "Content-Type":"application/json" },
+    body: JSON.stringify({ username })
+  });
+
+  const j = await readJsonSafe(r);
+
+  if(!r.ok || !j.success){
+    toast(j?.error || "删除失败", "err");
+    return;
+  }
+
+  sessionKeys.delete(username);
+
+  toast("好友已删除", "ok");
+  loadFriends();
+
+  document.querySelector(".im-main").innerHTML =
+    `<div class="muted">好友已删除</div>`;
+}
+
 
 
 function selectFriend(f){
