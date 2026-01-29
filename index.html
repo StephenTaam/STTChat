@@ -1614,7 +1614,7 @@ document.getElementById("btnAddFriend").onclick = async ()=>{
     if(data.status === "accepted"){
     // 对方之前已经请求过 → 直接成为好友
 
-      const key = await deriveSessionKey(j.public_key.spki);
+      const key = await deriveSessionKey(data.public_key.spki);
       sessionKeys.set(name, key);
 
       toast("已自动互加为好友", "ok");
