@@ -1572,11 +1572,22 @@ function renderFriendList(){
   for(const f of friends){
     const div = document.createElement("div");
     div.className = "im-item";
-    div.textContent = f.display_name || f.username;
-    div.onclick = ()=> selectFriend(f);
+
+    const avatar = HTTP_BASE + (f.avatar_url || "/resources/avatars/default.png");
+
+    div.innerHTML = `
+      <div class="row" style="gap:10px;">
+        <img src="${avatar}" style="width:36px;height:36px;border-radius:50%">
+        <div>${escapeHtml(f.display_name || f.username)}</div>
+      </div>
+    `;
+
+    div.onclick = (e)=> selectFriend(f, e);
+
     box.appendChild(div);
   }
 }
+
 
 function selectFriend(f){
   currentChat = f;
@@ -1640,8 +1651,14 @@ function renderRequestList(){
     const div = document.createElement("div");
     div.className = "im-item";
 
+    const avatar = HTTP_BASE + (r.avatar_url || "/resources/avatars/default.png");
+
     div.innerHTML = `
-      <div>${escapeHtml(r.display_name || r.username)}</div>
+      <div class="row" style="gap:10px;">
+        <img src="${avatar}" style="width:32px;height:32px;border-radius:50%">
+        <div>${escapeHtml(r.display_name || r.username)}</div>
+      </div>
+
       <div class="row" style="margin-top:6px;">
         <button class="btn primary btn-sm">同意</button>
         <button class="btn danger btn-sm">拒绝</button>
@@ -1650,12 +1667,14 @@ function renderRequestList(){
 
     div.querySelector(".btn.primary").onclick =
       ()=>acceptFriend(r.username);
+
     div.querySelector(".btn.danger").onclick =
       ()=>rejectFriend(r.username);
 
     box.appendChild(div);
   }
 }
+
 async function deriveSessionKey(peerSpkiB64){
   const peerKey = await crypto.subtle.importKey(
     "spki",
