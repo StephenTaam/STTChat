@@ -515,11 +515,20 @@
       
   
       <!-- 右侧：聊天区 -->
-      <div class="im-main">
-        <div class="im-placeholder">
-          选择一个好友开始聊天
+      <div class="im-main" id="chatMain">
+        <div id="chatMessages" style="flex:1;overflow-y:auto;padding:10px"></div>
+      
+        <div style="border-top:1px solid rgba(255,255,255,.1);padding:8px">
+          <div class="row">
+            <input id="chatInput" placeholder="输入消息…" style="flex:1">
+            <button class="btn ghost" id="btnEmoji">😀</button>
+            <input type="file" id="fileInput" hidden>
+            <button class="btn ghost" id="btnFile">📎</button>
+            <button class="btn primary" id="btnSend">发送</button>
+          </div>
         </div>
       </div>
+      
   
     </div>
   </div>
@@ -745,6 +754,91 @@ let session = {
 /* =====================================================
    小工具
 ===================================================== */
+const chatInput = document.getElementById("chatInput");
+const btnSend = document.getElementById("btnSend");
+const btnEmoji = document.getElementById("btnEmoji");
+const btnFile = document.getElementById("btnFile");
+const fileInput = document.getElementById("fileInput");
+const chatMessages = document.getElementById("chatMessages");
+
+async function sendEncrypted(kind, dataBytes){
+  if(!currentChat) return toast("先选择好友","warn");
+  if(!wsReady) return toast("WS 未连接","err");
+
+  const key = sessionKeys.get(currentChat.username);
+  if(!key) return toast("无会话密钥","err");
+
+  const iv = getRandomBytes(12);
+
+  const ct = await crypto.subtle.encrypt(
+    {name:"AES-GCM",iv},
+    key,
+    dataBytes
+  );
+
+  ws.send(JSON.stringify({
+    type:"chat_send",
+    to: currentChat.username,
+    payload:{
+      kind,
+      iv: bufToBase64(iv),
+      ciphertext: bufToBase64(ct)
+    }
+  }));
+}
+
+btnSend.onclick = async ()=>{
+  const text = chatInput.value.trim();
+  if(!text) return;
+
+  await sendEncrypted("text", strToUint8(text));
+  chatInput.value="";
+};
+
+btnEmoji.onclick = ()=>{
+  chatInput.value += "😀";
+  chatInput.focus();
+};
+
+btnFile.onclick = ()=> fileInput.click();
+
+fileInput.onchange = async ()=>{
+  const f = fileInput.files[0];
+  if(!f) return;
+
+  const buf = await f.arrayBuffer();
+  await sendEncrypted("file", new Uint8Array(buf));
+};
+
+async function handleIncomingMessage(msg){
+  const key = sessionKeys.get(msg.from);
+  if(!key) return;
+
+  const pt = await crypto.subtle.decrypt(
+    {name:"AES-GCM",iv:base64ToBytes(msg.payload.iv)},
+    key,
+    base64ToBytes(msg.payload.ciphertext)
+  );
+
+  renderMessage(msg.from, msg.payload.kind, new Uint8Array(pt));
+}
+
+function renderMessage(from, kind, data){
+  const box = chatMessages;
+
+  let el = document.createElement("div");
+
+  if(kind==="text"){
+    el.textContent = new TextDecoder().decode(data);
+  }else{
+    el.textContent = `[${kind}] ${data.length} bytes`;
+  }
+
+  el.style.margin="6px";
+  box.appendChild(el);
+  box.scrollTop = box.scrollHeight;
+}
+
 async function fetchPasswordParams(){
   if(!session.httpToken) throw new Error("no http token");
 
@@ -1753,7 +1847,11 @@ async function rejectFriend(username){
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify({ username })
   });
-
+  const j = await readJsonSafe(r);
+  if(!r.ok || !j.success){
+    toast("拒绝失败", "err");
+    return;
+  }
   toast("已拒绝", "ok");
   loadFriends();
 }
