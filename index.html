@@ -374,6 +374,10 @@
 .im-placeholder{
   color: var(--muted);
 }
+.msg{max-width:70%;padding:8px;border-radius:12px;margin:6px}
+.msg.me{margin-left:auto;background:#3b82f6}
+.msg.peer{background:rgba(255,255,255,.12)}
+.msg img{max-width:100%;border-radius:8px}
 
 </style>
 </head>
@@ -761,39 +765,33 @@ const btnFile = document.getElementById("btnFile");
 const fileInput = document.getElementById("fileInput");
 const chatMessages = document.getElementById("chatMessages");
 
-async function sendEncrypted(kind, dataBytes){
-  if(!currentChat) return toast("先选择好友","warn");
-  if(!wsReady) return toast("WS 未连接","err");
+async function sendEncrypted(kind,data,meta={}){
+ const key=sessionKeys.get(currentChat.username);
+ const iv=getRandomBytes(12);
 
-  const key = sessionKeys.get(currentChat.username);
-  if(!key) return toast("无会话密钥","err");
+ const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,data);
 
-  const iv = getRandomBytes(12);
-
-  const ct = await crypto.subtle.encrypt(
-    {name:"AES-GCM",iv},
-    key,
-    dataBytes
-  );
-
-  ws.send(JSON.stringify({
-    type:"chat_send",
-    to: currentChat.username,
-    payload:{
-      kind,
-      iv: bufToBase64(iv),
-      ciphertext: bufToBase64(ct)
-    }
-  }));
+ ws.send(JSON.stringify({
+  type:"chat_send",
+  to:currentChat.username,
+  payload:{
+   kind,
+   ...meta,
+   iv:bufToBase64(iv),
+   ciphertext:bufToBase64(ct)
+  }
+ }));
 }
 
-btnSend.onclick = async ()=>{
-  const text = chatInput.value.trim();
-  if(!text) return;
 
-  await sendEncrypted("text", strToUint8(text));
-  chatInput.value="";
+btnSend.onclick=async()=>{
+ await sendEncrypted("text",strToUint8(chatInput.value),{
+  mime:"text/plain",
+  size:chatInput.value.length
+ });
+ chatInput.value="";
 };
+
 
 btnEmoji.onclick = ()=>{
   chatInput.value += "😀";
@@ -802,13 +800,17 @@ btnEmoji.onclick = ()=>{
 
 btnFile.onclick = ()=> fileInput.click();
 
-fileInput.onchange = async ()=>{
-  const f = fileInput.files[0];
-  if(!f) return;
+fileInput.onchange=async()=>{
+ const f=fileInput.files[0];
+ const buf=await f.arrayBuffer();
 
-  const buf = await f.arrayBuffer();
-  await sendEncrypted("file", new Uint8Array(buf));
+ await sendEncrypted(
+   f.type.startsWith("image")?"image":"file",
+   new Uint8Array(buf),
+   {mime:f.type,name:f.name,size:f.size}
+ );
 };
+
 
 async function handleIncomingMessage(msg){
   const key = sessionKeys.get(msg.from);
@@ -820,23 +822,42 @@ async function handleIncomingMessage(msg){
     base64ToBytes(msg.payload.ciphertext)
   );
 
-  renderMessage(msg.from, msg.payload.kind, new Uint8Array(pt));
+  renderMessage(msg.from,msg.payload.kind,new Uint8Array(pt),msg.payload);
+
 }
 
-function renderMessage(from, kind, data){
-  const box = chatMessages;
+function renderMessage(from,kind,data,meta){
+ const div=document.createElement("div");
+ div.className="msg "+(from===session.username?"me":"peer");
 
-  let el = document.createElement("div");
+ if(kind==="text"){
+  div.textContent=new TextDecoder().decode(data);
+ }
 
-  if(kind==="text"){
-    el.textContent = new TextDecoder().decode(data);
-  }else{
-    el.textContent = `[${kind}] ${data.length} bytes`;
-  }
+ if(kind==="image"){
+  const url=URL.createObjectURL(new Blob([data],{type:meta.mime}));
+  div.innerHTML=`<img src="${url}">`;
+ }
 
-  el.style.margin="6px";
-  box.appendChild(el);
-  box.scrollTop = box.scrollHeight;
+ if(kind==="file"){
+  const url=URL.createObjectURL(new Blob([data],{type:meta.mime}));
+  div.innerHTML=`<a href="${url}" download="${meta.name}">📎 ${meta.name}</a>`;
+ }
+
+ chatMessages.appendChild(div);
+ chatMessages.scrollTop=chatMessages.scrollHeight;
+}
+
+async function loadHistory(peer){
+ const r=await authedFetch(`/api/messages?peer=${peer}`);
+ const j=await r.json();
+
+ for(const m of j.messages){
+  await handleIncomingMessage({
+    from:m.from,
+    payload:m.payload
+  });
+ }
 }
 
 async function fetchPasswordParams(){
@@ -1718,15 +1739,16 @@ async function deleteFriend(username){
 
 
 
-function selectFriend(f){
-  currentChat = f;
-  document.querySelectorAll(".im-item").forEach(el=>el.classList.remove("active"));
-  event.currentTarget.classList.add("active");
+function selectFriend(f,e){
+ currentChat=f;
 
-  document.querySelector(".im-main").innerHTML = `
-    <div class="muted">与 ${escapeHtml(f.display_name || f.username)} 的聊天（待实现）</div>
-  `;
+ document.querySelectorAll(".im-item").forEach(x=>x.classList.remove("active"));
+ e.currentTarget.classList.add("active");
+
+ chatMessages.innerHTML="";
+ loadHistory(f.username);
 }
+
 document.getElementById("btnAddFriend").onclick = async ()=>{
   const name = prompt("输入对方用户名");
   if(!name) return;
