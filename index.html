@@ -822,13 +822,23 @@ async function handleIncomingMessage(msg){
     base64ToBytes(msg.payload.ciphertext)
   );
 
-  renderMessage(msg.from,msg.payload.kind,new Uint8Array(pt),msg.payload);
+  renderMessage(
+    msg.from,
+    msg.payload.kind,
+    new Uint8Array(pt),
+    msg.payload,
+    msg.ts
+  );
 
 }
 
-function renderMessage(from,kind,data,meta){
+function renderMessage(from,kind,data,meta,ts){
  const div=document.createElement("div");
  div.className="msg "+(from===session.username?"me":"peer");
+
+ const time = (ts !== undefined && ts !== null)
+   ? new Date(Number(ts))
+   : null;
 
  if(kind==="text"){
   div.textContent=new TextDecoder().decode(data);
@@ -844,6 +854,14 @@ function renderMessage(from,kind,data,meta){
   div.innerHTML=`<a href="${url}" download="${meta.name}">📎 ${meta.name}</a>`;
  }
 
+ if(time && !isNaN(time.getTime())){
+  const t = document.createElement("div");
+  t.className = "muted";
+  t.style.marginTop = "4px";
+  t.textContent = time.toLocaleString();
+  div.appendChild(t);
+ }
+
  chatMessages.appendChild(div);
  chatMessages.scrollTop=chatMessages.scrollHeight;
 }
@@ -855,7 +873,8 @@ async function loadHistory(peer){
  for(const m of j.messages){
   await handleIncomingMessage({
     from:m.from,
-    payload:m.payload
+    payload:m.payload,
+    ts: m.ts
   });
  }
 }
