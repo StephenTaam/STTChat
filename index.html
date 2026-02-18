@@ -328,7 +328,14 @@
 /* ===== IM Layout ===== */
 .im-layout{
   display:flex;
-  height: 460px;
+  height: min(72vh, 720px);
+  min-height: 520px;
+}
+@media (max-width: 860px){
+  .im-layout{
+    height: auto;
+    min-height: 70vh;
+  }
 }
 
 .im-sidebar{
