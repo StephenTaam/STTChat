@@ -430,7 +430,7 @@
         <div class="logo"></div>
         <div>
           <h1>STTChat</h1>
-          <div class="sub">端到端加密 · 私钥仅保存在内存</div>
+          <div class="sub">安全聊天</div>
         </div>
       </div>
       <div class="row">
@@ -445,7 +445,7 @@
       <div class="card">
         <div class="title">
           <h2>登录</h2>
-          <span class="hint">WS challenge → 计算 hash → 登录 → 解密私钥</span>
+          <span class="hint">请输入账号和密码</span>
         </div>
 
         <form id="loginForm">
@@ -460,7 +460,7 @@
               <input id="password" type="password" required autocomplete="current-password" placeholder="输入密码" />
               <span id="togglePw" class="toggle-eye">👁</span>
             </div>
-            <div class="muted" style="margin-top:6px;">提示：登录时必须使用服务器返回的 salt 才能算出一致的 passwordHash。</div>
+            <div class="muted" style="margin-top:6px;">请确保账号密码正确。</div>
           </label>
 
           <button class="btn primary full" type="submit" style="margin-top:12px;">登录</button>
@@ -495,14 +495,7 @@
 
           <div class="sep"></div>
 
-          <div class="muted">
-            安全模型：
-            <ul style="margin:8px 0 0 18px; padding:0;">
-              <li>密码：PBKDF2-HMAC-SHA256 派生 passwordHash</li>
-              <li>私钥：AES-256-GCM 加密存服务器，客户端解密后仅存在内存</li>
-              <li>HTTP token：仅用于资料/头像等“账户管理”接口</li>
-            </ul>
-          </div>
+          <div class="muted">欢迎使用。</div>
         </div>
       </div>
     </div>
@@ -610,10 +603,10 @@
         <div style="flex:1; min-width: 220px;">
           <div class="row" style="justify-content: space-between;">
             <span class="pill" id="homeUser">用户：-</span>
-            <span class="pill" id="homeKey">私钥：-</span>
+        <span class="pill" id="homeKey">状态：-</span>
           </div>
           <div class="muted" style="margin-top:8px;">
-            私钥只在内存中；退出会清空并断开 WS。
+            退出会断开连接。
           </div>
         </div>
       </div>
@@ -650,7 +643,7 @@
     <div class="card soft">
       <div class="title">
         <h2>安全</h2>
-        <span class="hint">改密码会重新加密私钥</span>
+        <span class="hint">修改密码</span>
       </div>
 
       <details id="panelPassword">
@@ -660,11 +653,10 @@
         </summary>
 
         <div class="muted" style="margin-top:10px;">
-          改密码需要：
+          提示：
           <ul style="margin:6px 0 0 18px; padding:0;">
-            <li>用旧密码校验 oldPasswordHash</li>
-            <li>用新密码生成 newPasswordHash</li>
-            <li>用新密码派生 AES key 重新加密私钥并提交</li>
+            <li>请使用当前密码验证</li>
+            <li>新密码将立即生效</li>
           </ul>
         </div>
 
@@ -701,7 +693,7 @@
         </summary>
 
         <div class="muted" style="margin-top:10px;">
-          这是危险操作：会删除你的账号数据。建议你要求用户输入密码再次确认。
+          此操作不可恢复，请谨慎。
         </div>
 
         <label>
@@ -715,7 +707,7 @@
         </label>
 
         <div class="row" style="margin-top:10px;">
-          <button class="btn danger" id="btnDeleteAccount" type="button">我确认注销账号</button>
+          <button class="btn danger" id="btnDeleteAccount" type="button">确认注销账号</button>
           <span class="muted" id="delHint"></span>
         </div>
       </details>
@@ -1870,7 +1862,7 @@ function renderFriendList(){
 }
 
 async function deleteFriend(username){
-  if(!confirm("确定删除好友？聊天记录将保留在服务器（密文）")) return;
+  if(!confirm("确定删除好友？")) return;
 
   const r = await authedFetch("/api/friends", {
     method: "DELETE",
