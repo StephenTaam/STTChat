@@ -799,6 +799,11 @@ async function sendEncrypted(kind,data,meta={}){
    ciphertext:bufToBase64(ct)
   }
  }));
+
+ // local echo so sender sees the message even if server does not echo back
+ try{
+  renderMessage(session.username, kind, data, meta, clientTs);
+ }catch{}
 }
 
 
@@ -1156,6 +1161,15 @@ function connectWS(){
     }
     // 其他消息
     if (msg.type === "chat_recv") {
+  if (msg.from === session.username) {
+    const key = (msg.client_ts !== undefined && msg.client_ts !== null)
+      ? String(msg.client_ts)
+      : (msg.ts !== undefined && msg.ts !== null ? String(msg.ts) : null);
+    if (key && pendingSendByTs.has(key)) {
+      pendingSendByTs.delete(key);
+      return;
+    }
+  }
   handleIncomingMessage(msg);
 }
 if (msg.type === "friend_request") {
