@@ -2019,8 +2019,9 @@ async function handleFriendAccepted(msg){
 function handleFriendRemoved(msg){
   const username = msg.username;
   if(!username) return;
-  friends = friends.filter(f => f.username !== username);
-  friendRequests = friendRequests.filter(r => r.username !== username);
+  const uname = String(username).toLowerCase();
+  friends = friends.filter(f => String(f.username || "").toLowerCase() !== uname);
+  friendRequests = friendRequests.filter(r => String(r.username || "").toLowerCase() !== uname);
   sessionKeys.delete(username);
   if(currentChat && currentChat.username === username){
     currentChat = null;
