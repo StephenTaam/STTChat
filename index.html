@@ -1144,8 +1144,10 @@ function connectWS(){
   currentWS.onmessage = async (ev) => {
     if (ws !== currentWS) return;
 
+    console.log("[ws] raw", ev.data);
     let msg;
     try { msg = JSON.parse(ev.data); } catch { return; }
+    console.log("[ws] parsed", msg);
 
     if (msg.type === "login_challenge") {
       await handleLoginChallenge(msg);
