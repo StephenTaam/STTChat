@@ -1738,6 +1738,18 @@ async function loadFriends(){
   friends = j.friends || [];
   friendRequests = j.requests || [];
 
+  // pre-derive session keys for friends with public_key.spki
+  for (const f of friends) {
+    if (!f.public_key || !f.public_key.spki) continue;
+    if (sessionKeys.has(f.username)) continue;
+    try {
+      const key = await deriveSessionKey(f.public_key.spki);
+      sessionKeys.set(f.username, key);
+    } catch (e) {
+      // ignore key derivation errors; user can retry later
+    }
+  }
+
   renderFriendList();
   renderRequestList();
 }
