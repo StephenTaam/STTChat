@@ -335,11 +335,14 @@
 @media (max-width: 860px){
   .brandbar{
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    gap: 10px;
   }
   .brandbar .row{
     width: 100%;
     justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   .im-layout{
     flex-direction: column;
@@ -352,7 +355,7 @@
     border-bottom: 1px solid rgba(255,255,255,.10);
   }
   .im-main{
-    min-height: 55vh;
+    min-height: 70vh;
   }
   .im-list{
     max-height: 34vh;
@@ -368,6 +371,16 @@
   }
   .im-chat-input input{
     min-width: 0;
+  }
+  .im-chat-input{
+    position: sticky;
+    bottom: 0;
+  }
+  .im-chat-body{
+    min-height: 45vh;
+  }
+  .im-sidebar.hidden{
+    display:none;
   }
 }
 
