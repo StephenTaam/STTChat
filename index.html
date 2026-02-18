@@ -729,6 +729,7 @@ function escapeHtml(s){
 ===================================================== */
 let friendRequests = []; // [{username, display_name}]
 const sessionKeys = new Map(); // peer -> CryptoKey
+const pendingSendByTs = new Map(); // client ts -> pending meta
 
 let friends = []; // [{username, display_name, avatar_url}]
 let currentChat = null;
@@ -766,14 +767,31 @@ const fileInput = document.getElementById("fileInput");
 const chatMessages = document.getElementById("chatMessages");
 
 async function sendEncrypted(kind,data,meta={}){
- const key=sessionKeys.get(currentChat.username);
+ if(!currentChat || !currentChat.username) throw new Error("no current chat");
+ if(!ws || ws.readyState !== WebSocket.OPEN) throw new Error("ws not connected");
+
+ let key=sessionKeys.get(currentChat.username);
+ if(key && typeof key.then === "function"){
+  key = await key;
+  sessionKeys.set(currentChat.username, key);
+ }
+ if(!key) throw new Error("missing session key");
+ if(typeof CryptoKey !== "undefined" && !(key instanceof CryptoKey)){
+  throw new Error("invalid session key");
+ }
  const iv=getRandomBytes(12);
 
  const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,data);
+ const clientTs = Date.now();
+ pendingSendByTs.set(String(clientTs), {
+  to: currentChat.username,
+  kind
+ });
 
  ws.send(JSON.stringify({
   type:"chat_send",
   to:currentChat.username,
+  ts: clientTs,
   payload:{
    kind,
    ...meta,
@@ -785,11 +803,15 @@ async function sendEncrypted(kind,data,meta={}){
 
 
 btnSend.onclick=async()=>{
- await sendEncrypted("text",strToUint8(chatInput.value),{
-  mime:"text/plain",
-  size:chatInput.value.length
- });
- chatInput.value="";
+ try{
+  await sendEncrypted("text",strToUint8(chatInput.value),{
+   mime:"text/plain",
+   size:chatInput.value.length
+  });
+  chatInput.value="";
+ }catch(err){
+  toast("发送失败：" + (err.message || err), "err");
+ }
 };
 
 
@@ -804,12 +826,30 @@ fileInput.onchange=async()=>{
  const f=fileInput.files[0];
  const buf=await f.arrayBuffer();
 
- await sendEncrypted(
-   f.type.startsWith("image")?"image":"file",
-   new Uint8Array(buf),
-   {mime:f.type,name:f.name,size:f.size}
- );
+ try{
+  await sendEncrypted(
+    f.type.startsWith("image")?"image":"file",
+    new Uint8Array(buf),
+    {mime:f.type,name:f.name,size:f.size}
+  );
+ }catch(err){
+  toast("发送失败：" + (err.message || err), "err");
+ }
 };
+
+function handleChatSendAck(msg){
+  const key =
+    msg.client_ts !== undefined ? String(msg.client_ts) :
+    (msg.ts !== undefined ? String(msg.ts) : null);
+
+  if(msg.success){
+    if(key) pendingSendByTs.delete(key);
+    return;
+  }
+
+  if(key) pendingSendByTs.delete(key);
+  toast("发送失败：" + (msg.error || "unknown_error"), "err");
+}
 
 
 async function handleIncomingMessage(msg){
@@ -1108,6 +1148,10 @@ function connectWS(){
     }
     if (msg.type === "login_result") {
       await handleLoginResult(msg);
+      return;
+    }
+    if (msg.type === "chat_send") {
+      handleChatSendAck(msg);
       return;
     }
     // 其他消息
