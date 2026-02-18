@@ -1951,11 +1951,24 @@ async function acceptFriend(username){
   sessionKeys.set(username, key);
 
   toast("好友已添加", "ok");
-  loadFriends();
+  // optimistic UI update to avoid needing a manual refresh
+  friendRequests = friendRequests.filter(r => r.username !== username);
+  if(!friends.find(f => f.username === username)){
+    const req = friendRequests.find(r => r.username === username);
+    friends.unshift({
+      username,
+      display_name: req ? req.display_name : "",
+      avatar_url: req ? req.avatar_url : "/resources/avatars/default.png",
+      public_key: j.public_key
+    });
+  }
+  renderFriendList();
+  renderRequestList();
+  await loadFriends();
 }
 
 async function rejectFriend(username){
-  await authedFetch("/api/friends/reject", {
+  const r = await authedFetch("/api/friends/reject", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify({ username })
