@@ -1755,8 +1755,11 @@ drawer.querySelector(".settings-mask").onclick = ()=>{
   drawer.classList.add("hidden");
 };
 async function loadFriends(){
+  console.log("[friends] loadFriends start", { hasToken: !!session.httpToken });
   const r = await authedFetch("/api/friends");
+  console.log("[friends] response", r.status);
   const j = await readJsonSafe(r);
+  console.log("[friends] body", j);
 
   if(!r.ok || !j.success){
     toast("好友列表加载失败", "err");
