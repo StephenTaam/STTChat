@@ -401,6 +401,7 @@
   border-top:1px solid rgba(255,255,255,.08);
   padding:10px;
   background: rgba(0,0,0,.15);
+  position: relative;
 }
 .im-empty{
   flex:1;
@@ -414,6 +415,39 @@
 .msg.me{margin-left:auto;background:#3b82f6}
 .msg.peer{background:rgba(255,255,255,.12)}
 .msg img{max-width:100%;border-radius:8px}
+
+.emoji-panel{
+  position:absolute;
+  bottom:54px;
+  left:10px;
+  width: 320px;
+  max-height: 260px;
+  overflow-y:auto;
+  background: rgba(12,16,28,.98);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.35);
+  padding: 10px;
+  z-index: 10;
+}
+.emoji-grid{
+  display:grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+}
+.emoji-btn{
+  appearance:none;
+  border:none;
+  background: transparent;
+  cursor:pointer;
+  font-size: 20px;
+  line-height: 1;
+  padding: 6px;
+  border-radius: 8px;
+}
+.emoji-btn:hover{
+  background: rgba(255,255,255,.08);
+}
 
 </style>
 </head>
@@ -567,6 +601,7 @@
           <div class="row">
             <input id="chatInput" placeholder="输入消息…" style="flex:1">
             <button class="btn ghost" id="btnEmoji">😀</button>
+            <div id="emojiPanel" class="emoji-panel hidden"></div>
             <input type="file" id="fileInput" hidden>
             <button class="btn ghost" id="btnFile">📎</button>
             <button class="btn primary" id="btnSend">发送</button>
@@ -810,6 +845,7 @@ const chatInputArea = document.getElementById("chatInputArea");
 const chatTitle = document.getElementById("chatTitle");
 const chatSub = document.getElementById("chatSub");
 const btnCloseChat = document.getElementById("btnCloseChat");
+const emojiPanel = document.getElementById("emojiPanel");
 
 async function sendEncrypted(kind,data,meta={}){
  if(!currentChat || !currentChat.username) throw new Error("no current chat");
@@ -865,9 +901,54 @@ btnSend.onclick=async()=>{
 };
 
 
-btnEmoji.onclick = ()=>{
-  chatInput.value += "😀";
-  chatInput.focus();
+chatInput.addEventListener("keydown", async (e)=>{
+  if(e.key === "Enter"){
+    e.preventDefault();
+    btnSend.click();
+  }
+});
+
+const EMOJIS = [
+  "😀","😁","😂","🤣","😅","😊","😍","😘",
+  "😎","🤔","😴","😮","😢","😭","😡","🤯",
+  "👍","👎","🙏","👏","🔥","✨","💯","🎉",
+  "❤️","🧡","💛","💚","💙","💜","🖤","🤍",
+  "😺","😸","😹","😻","😼","🙈","🙉","🙊",
+  "☕","🍔","🍟","🍕","🍜","🍣","🍰","🍩"
+];
+
+function buildEmojiPanel(){
+  if(!emojiPanel) return;
+  emojiPanel.innerHTML = "";
+  const grid = document.createElement("div");
+  grid.className = "emoji-grid";
+  for(const em of EMOJIS){
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "emoji-btn";
+    b.textContent = em;
+    b.onclick = ()=>{
+      chatInput.value += em;
+      chatInput.focus();
+    };
+    grid.appendChild(b);
+  }
+  emojiPanel.appendChild(grid);
+}
+
+function toggleEmojiPanel(show){
+  if(!emojiPanel) return;
+  if(show === undefined){
+    emojiPanel.classList.toggle("hidden");
+  }else{
+    emojiPanel.classList.toggle("hidden", !show);
+  }
+}
+
+btnEmoji.onclick = (e)=>{
+  e.stopPropagation();
+  buildEmojiPanel();
+  toggleEmojiPanel();
 };
 
 if (btnCloseChat){
@@ -877,6 +958,13 @@ if (btnCloseChat){
 }
 
 btnFile.onclick = ()=> fileInput.click();
+
+document.addEventListener("click", (e)=>{
+  if(!emojiPanel) return;
+  if(emojiPanel.classList.contains("hidden")) return;
+  if(e.target === btnEmoji || emojiPanel.contains(e.target)) return;
+  toggleEmojiPanel(false);
+});
 
 fileInput.onchange=async()=>{
  const f=fileInput.files[0];
