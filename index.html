@@ -1161,10 +1161,18 @@ function connectWS(){
       handleChatSendAck(msg);
       return;
     }
+    if (msg.type === "friend_accepted") {
+      await handleFriendAccepted(msg);
+      return;
+    }
+    if (msg.type === "friend_removed") {
+      handleFriendRemoved(msg);
+      return;
+    }
     // 其他消息
     if (msg.type === "chat_recv") {
-  if (msg.from === session.username) {
-    const key = (msg.client_ts !== undefined && msg.client_ts !== null)
+      if (msg.from === session.username) {
+        const key = (msg.client_ts !== undefined && msg.client_ts !== null)
       ? String(msg.client_ts)
       : (msg.ts !== undefined && msg.ts !== null ? String(msg.ts) : null);
     if (key && pendingSendByTs.has(key)) {
@@ -1980,6 +1988,43 @@ async function rejectFriend(username){
   }
   toast("已拒绝", "ok");
   loadFriends();
+}
+
+async function handleFriendAccepted(msg){
+  const username = msg.username;
+  if(!username) return;
+  if(!friends.find(f => f.username === username)){
+    friends.unshift({
+      username,
+      display_name: msg.display_name || "",
+      avatar_url: msg.avatar_url || "/resources/avatars/default.png",
+      public_key: msg.public_key
+    });
+  }
+  if(msg.public_key && msg.public_key.spki){
+    try{
+      const key = await deriveSessionKey(msg.public_key.spki);
+      sessionKeys.set(username, key);
+    }catch{}
+  }
+  renderFriendList();
+  renderRequestList();
+  if(typeof toast === "function") toast("已成为好友", "ok");
+}
+
+function handleFriendRemoved(msg){
+  const username = msg.username;
+  if(!username) return;
+  friends = friends.filter(f => f.username !== username);
+  friendRequests = friendRequests.filter(r => r.username !== username);
+  sessionKeys.delete(username);
+  if(currentChat && currentChat.username === username){
+    currentChat = null;
+    chatMessages.innerHTML = "<div class=\"muted\">好友已删除</div>";
+  }
+  renderFriendList();
+  renderRequestList();
+  if(typeof toast === "function") toast("对方已删除好友", "warn");
 }
 
 
