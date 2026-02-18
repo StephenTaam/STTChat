@@ -332,9 +332,35 @@
   min-height: 520px;
 }
 @media (max-width: 860px){
+  .brandbar{
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .brandbar .row{
+    width: 100%;
+    justify-content: space-between;
+  }
   .im-layout{
+    flex-direction: column;
     height: auto;
     min-height: 70vh;
+  }
+  .im-sidebar{
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,.10);
+  }
+  .im-main{
+    min-height: 55vh;
+  }
+  .im-chat-header .row{
+    gap: 6px;
+  }
+  .im-chat-input .row{
+    gap: 6px;
+  }
+  .im-chat-input input{
+    min-width: 0;
   }
 }
 
@@ -826,6 +852,8 @@ let session = {
   displayName: null,
   avatarUrl : null,
   httpToken : null,
+  wsAuthed: false,
+  lastLogin: null, // { username, password } kept in memory only
 
   // 登录 challenge 的 password hash 参数（后续改密码/注销用）
   pwSaltB64: null,
@@ -853,6 +881,8 @@ const chatTitle = document.getElementById("chatTitle");
 const chatSub = document.getElementById("chatSub");
 const btnCloseChat = document.getElementById("btnCloseChat");
 const emojiPanel = document.getElementById("emojiPanel");
+const imSidebar = document.querySelector(".im-sidebar");
+const chatMain = document.getElementById("chatMain");
 
 async function sendEncrypted(kind,data,meta={}){
  if(!currentChat || !currentChat.username) throw new Error("no current chat");
@@ -1251,6 +1281,11 @@ function connectWS(){
 
     if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
     reconnectDelay = 3000;
+
+    // try auto re-login if we have credentials in memory
+    if (session.lastLogin && !session.wsAuthed) {
+      startLogin(session.lastLogin.username, session.lastLogin.password);
+    }
   };
 
   currentWS.onclose = () => {
@@ -1265,12 +1300,10 @@ function connectWS(){
     updateConnPills();
 
     if (session.username) {
-      // 已登录时断线：强制回登录页
-      wipeSensitiveMemory();
-      pendingLogin = null;
-      backToLogin();
-      setStatus("连接已断开，请重新登录", true);
-      toast("WS 断开：请重新登录", "err");
+      // 断线不强制登出，等待重连
+      session.wsAuthed = false;
+      setStatus("连接已断开，正在重连…", true);
+      toast("WS 断开：正在重连", "warn");
     }
 
     if (reconnectTimer) return;
@@ -1449,6 +1482,8 @@ async function handleLoginResult(msg){
     session.httpToken = msg.http_token || null;
     session.avatarUrl = msg.avatar_url || "/resources/avatars/default.png";
     session.displayName = msg.display_name || msg.displayName || "";
+    session.wsAuthed = true;
+    session.lastLogin = { username, password };
 
     session.privateKeyPkcs8Bytes = pkcs8Bytes;
 
@@ -1571,6 +1606,8 @@ $("btnLogout").addEventListener("click", ()=>{
   closeWS();
   wipeSensitiveMemory();
   pendingLogin = null;
+  session.wsAuthed = false;
+  session.lastLogin = null;
 
   backToLogin();
   setStatus("");
@@ -2006,6 +2043,12 @@ function selectFriend(f,e){
  if(chatSub) chatSub.textContent = "与 " + (f.username || "") + " 的对话";
  if(btnCloseChat) btnCloseChat.classList.remove("hidden");
  loadHistory(f.username);
+
+  // on small screens, focus chat area
+  if (window.matchMedia && window.matchMedia("(max-width: 860px)").matches) {
+    if (imSidebar) imSidebar.classList.add("hidden");
+    if (chatMain) chatMain.classList.remove("hidden");
+  }
 }
 
 function clearChatSelection(){
@@ -2020,6 +2063,9 @@ function clearChatSelection(){
   if(chatTitle) chatTitle.textContent = "未选择聊天";
   if(chatSub) chatSub.textContent = "请选择一个好友开始聊天";
   if(btnCloseChat) btnCloseChat.classList.add("hidden");
+
+  if (imSidebar) imSidebar.classList.remove("hidden");
+  if (chatMain) chatMain.classList.remove("hidden");
 }
 
 document.getElementById("btnAddFriend").onclick = async ()=>{
