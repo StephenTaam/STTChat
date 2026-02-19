@@ -465,9 +465,11 @@
   font-size: 14px;
 }
 .msg{max-width:70%;padding:8px;border-radius:12px;margin:6px}
-  .msg.me{margin-left:auto;background:#2a7cf7;color:#fff}
-  .msg.peer{background:#e9edf3;color:#0f172a}
+.msg.me{margin-left:auto;background:#2a7cf7;color:#fff}
+.msg.peer{background:#e9edf3;color:#0f172a}
 .msg img{max-width:100%;border-radius:8px}
+.msg.me .muted{color: rgba(255,255,255,.88);}
+.msg.peer .muted{color: #64748b;}
 
 .emoji-panel{
   position:absolute;
@@ -1256,6 +1258,11 @@ async function loadHistory(peer){
     return;
   }
   const list = Array.isArray(j.messages) ? j.messages : (Array.isArray(j.message) ? j.message : []);
+  list.sort((a,b)=>{
+    const at = Number((a && a.payload && a.payload.ts) ? a.payload.ts : a?.ts || 0);
+    const bt = Number((b && b.payload && b.payload.ts) ? b.payload.ts : b?.ts || 0);
+    return at - bt;
+  });
   console.log("[history] list length", list.length);
   for(const m of list){
     const payload = (m && m.payload && m.payload.payload) ? m.payload.payload : m.payload;
