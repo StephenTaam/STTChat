@@ -1161,8 +1161,10 @@ function handleChatSendAck(msg){
 
 async function handleIncomingMessage(msg){
   console.log("[history] incoming", msg);
-  const key = await resolveSessionKey(msg.from);
-  console.log("[history] key resolved", msg.from);
+  const keyOwner = (msg.from === session.username) ? (msg.peer || currentChat?.username) : msg.from;
+  if(!keyOwner) throw new Error("missing key owner");
+  const key = await resolveSessionKey(keyOwner);
+  console.log("[history] key resolved", keyOwner);
   let ciphertextBytes;
   if(msg.payload.ciphertext){
     ciphertextBytes = base64ToBytes(msg.payload.ciphertext);
@@ -1264,7 +1266,8 @@ async function loadHistory(peer){
     await handleIncomingMessage({
       from,
       payload,
-      ts
+      ts,
+      peer
     });
   }
   console.log("[history] load done");
