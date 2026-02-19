@@ -906,6 +906,25 @@ const imSidebar = document.querySelector(".im-sidebar");
 const chatMain = document.getElementById("chatMain");
 const btnReconnectHome = document.getElementById("btnReconnectHome");
 
+function isMobileView(){
+  return !!(window.matchMedia && window.matchMedia("(max-width: 860px)").matches);
+}
+
+function setMobilePane(mode){
+  if(!isMobileView()) {
+    if(imSidebar) imSidebar.classList.remove("hidden");
+    if(chatMain) chatMain.classList.remove("hidden");
+    return;
+  }
+  if(mode === "chat"){
+    if(imSidebar) imSidebar.classList.add("hidden");
+    if(chatMain) chatMain.classList.remove("hidden");
+    return;
+  }
+  if(imSidebar) imSidebar.classList.remove("hidden");
+  if(chatMain) chatMain.classList.add("hidden");
+}
+
 async function sendEncrypted(kind,data,meta={}){
  if(!currentChat || !currentChat.username) throw new Error("no current chat");
  if(!ws || ws.readyState !== WebSocket.OPEN) throw new Error("ws not connected");
@@ -1576,6 +1595,7 @@ function enterHome(){
   updateConnPills();
   loadFriends();
   clearChatSelection();
+  setMobilePane("list");
 
 }
 
@@ -2076,12 +2096,7 @@ function selectFriend(f,e){
  if(chatSub) chatSub.textContent = "与 " + (f.username || "") + " 的对话";
  if(btnCloseChat) btnCloseChat.classList.remove("hidden");
  loadHistory(f.username);
-
-  // on small screens, focus chat area
-  if (window.matchMedia && window.matchMedia("(max-width: 860px)").matches) {
-    if (imSidebar) imSidebar.classList.add("hidden");
-    if (chatMain) chatMain.classList.remove("hidden");
-  }
+ setMobilePane("chat");
 }
 
 function clearChatSelection(){
@@ -2097,8 +2112,7 @@ function clearChatSelection(){
   if(chatSub) chatSub.textContent = "请选择一个好友开始聊天";
   if(btnCloseChat) btnCloseChat.classList.add("hidden");
 
-  if (imSidebar) imSidebar.classList.remove("hidden");
-  if (chatMain) chatMain.classList.remove("hidden");
+  setMobilePane("list");
 }
 
 document.getElementById("btnAddFriend").onclick = async ()=>{
@@ -2292,6 +2306,10 @@ document.addEventListener("visibilitychange", ()=>{
       connectWS();
     }
   }
+});
+
+window.addEventListener("resize", ()=>{
+  setMobilePane(currentChat ? "chat" : "list");
 });
 </script>
 
