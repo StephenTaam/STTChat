@@ -1238,15 +1238,23 @@ function renderMessage(from,kind,data,meta,ts){
 }
 
 async function loadHistory(peer){
- const r=await authedFetch(`/api/messages?peer=${peer}`);
- const j=await r.json();
-
- for(const m of j.messages){
-  await handleIncomingMessage({
-    from:m.from,
-    payload:m.payload,
-    ts: m.ts
-  });
+ try{
+  const r = await authedFetch(`/api/messages?peer=${encodeURIComponent(peer)}`);
+  const j = await readJsonSafe(r);
+  if(!r.ok || !j || !j.success){
+    toast("历史消息加载失败：" + (j?.error || ("HTTP " + r.status)), "err");
+    return;
+  }
+  const list = Array.isArray(j.messages) ? j.messages : [];
+  for(const m of list){
+    await handleIncomingMessage({
+      from: m.from,
+      payload: m.payload,
+      ts: m.ts
+    });
+  }
+ }catch(err){
+  toast("历史消息加载失败", "err");
  }
 }
 
