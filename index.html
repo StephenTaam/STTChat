@@ -1160,18 +1160,23 @@ function handleChatSendAck(msg){
 
 
 async function handleIncomingMessage(msg){
+  console.log("[history] incoming", msg);
   const key = await resolveSessionKey(msg.from);
+  console.log("[history] key resolved", msg.from);
   let ciphertextBytes;
   if(msg.payload.ciphertext){
     ciphertextBytes = base64ToBytes(msg.payload.ciphertext);
+    console.log("[history] inline ciphertext bytes", ciphertextBytes.length);
   }else{
     ciphertextBytes = await downloadEncryptedFile(msg.payload);
+    console.log("[history] downloaded ciphertext bytes", ciphertextBytes.length);
   }
   const pt = await crypto.subtle.decrypt(
     {name:"AES-GCM",iv:base64ToBytes(msg.payload.iv)},
     key,
     ciphertextBytes
   );
+  console.log("[history] decrypt ok", { from: msg.from, kind: msg.payload.kind });
 
   renderMessage(
     msg.from,
@@ -1204,6 +1209,7 @@ async function downloadEncryptedFile(payload){
 }
 
 function renderMessage(from,kind,data,meta,ts){
+ console.log("[render] message", { from, kind, size: data?.length || 0, ts });
  const div=document.createElement("div");
  div.className="msg "+(from===session.username?"me":"peer");
 
@@ -1239,21 +1245,31 @@ function renderMessage(from,kind,data,meta,ts){
 
 async function loadHistory(peer){
  try{
+  console.log("[history] load start", { peer });
   const r = await authedFetch(`/api/messages?peer=${encodeURIComponent(peer)}`);
   const j = await readJsonSafe(r);
+  console.log("[history] response", { status: r.status, body: j });
   if(!r.ok || !j || !j.success){
     toast("历史消息加载失败：" + (j?.error || ("HTTP " + r.status)), "err");
     return;
   }
-  const list = Array.isArray(j.messages) ? j.messages : [];
+  const list = Array.isArray(j.messages) ? j.messages : (Array.isArray(j.message) ? j.message : []);
+  console.log("[history] list length", list.length);
   for(const m of list){
+    const payload = (m && m.payload && m.payload.payload) ? m.payload.payload : m.payload;
+    const ts = (m && m.payload && m.payload.ts) ? m.payload.ts : m.ts;
+    const from = (m && m.payload && m.payload.from) ? m.payload.from : m.from;
+    console.log("[history] normalized", { from, ts, hasPayload: !!payload });
+    if(!from || !payload) continue;
     await handleIncomingMessage({
-      from: m.from,
-      payload: m.payload,
-      ts: m.ts
+      from,
+      payload,
+      ts
     });
   }
+  console.log("[history] load done");
  }catch(err){
+  console.error("[history] load exception", err);
   toast("历史消息加载失败", "err");
  }
 }
