@@ -299,6 +299,22 @@
   z-index: 1000;
 }
 
+.server-setup{
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: rgba(15,23,42,.45);
+  backdrop-filter: blur(4px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 16px;
+}
+.server-setup .panel{
+  width: 100%;
+  max-width: 560px;
+}
+
 .settings-mask{
   position:absolute;
   inset:0;
@@ -509,6 +525,32 @@
 
 <body>
 <div class="toast-wrap" id="toastWrap"></div>
+<div id="serverSetup" class="server-setup hidden">
+  <div class="card panel">
+    <div class="title">
+      <h2>服务器配置</h2>
+      <span class="hint">首次进入需要填写</span>
+    </div>
+    <label>
+      服务器 IP / 域名
+      <input id="serverHost" type="text" placeholder="例如：42.51.13.120">
+    </label>
+    <div class="row">
+      <label style="flex:1">
+        HTTP 端口
+        <input id="serverHttpPort" type="number" min="1" max="65535" value="8080">
+      </label>
+      <label style="flex:1">
+        WS 端口
+        <input id="serverWsPort" type="number" min="1" max="65535" value="5050">
+      </label>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn primary" id="btnSaveServerConfig" type="button">保存并进入</button>
+      <span class="muted" id="serverCfgHint"></span>
+    </div>
+  </div>
+</div>
 
 <div class="container">
 
@@ -815,9 +857,10 @@
 /* =====================================================
    配置：你需要改这里
 ===================================================== */
-const HTTP_BASE = "https://42.51.13.120:8080"; // ← 你的 HTTP 服务 IP + 端口
-const WS_URL = "wss://42.51.13.120:5050";     // ← 你的 wss 地址
-const REGISTER_URL = "resources/signup.html";  // ← 你的注册页
+const SERVER_CONFIG_KEY = "sttchat_server_config_v1";
+let HTTP_BASE = "";
+let WS_URL = "";
+const REGISTER_URL = "resources/signup.html";
 const FILE_UPLOAD_PATH = "/api/files/upload";
 /* =====================================================
    密码学参数
@@ -901,6 +944,60 @@ const imSidebar = document.querySelector(".im-sidebar");
 const chatMain = document.getElementById("chatMain");
 const btnReconnectHome = document.getElementById("btnReconnectHome");
 const newPwInput = document.getElementById("newPw");
+const serverSetup = document.getElementById("serverSetup");
+const serverHostInput = document.getElementById("serverHost");
+const serverHttpPortInput = document.getElementById("serverHttpPort");
+const serverWsPortInput = document.getElementById("serverWsPort");
+const btnSaveServerConfig = document.getElementById("btnSaveServerConfig");
+const serverCfgHint = document.getElementById("serverCfgHint");
+
+function buildServerUrls(cfg){
+  return {
+    httpBase: `https://${cfg.host}:${cfg.httpPort}`,
+    wsUrl: `wss://${cfg.host}:${cfg.wsPort}`
+  };
+}
+
+function normalizeServerConfig(cfg){
+  const host = String(cfg?.host || "").trim();
+  const httpPort = Number(cfg?.httpPort || 8080);
+  const wsPort = Number(cfg?.wsPort || 5050);
+  if(!host) return null;
+  if(!Number.isInteger(httpPort) || httpPort < 1 || httpPort > 65535) return null;
+  if(!Number.isInteger(wsPort) || wsPort < 1 || wsPort > 65535) return null;
+  return { host, httpPort, wsPort };
+}
+
+function loadServerConfig(){
+  try{
+    const raw = localStorage.getItem(SERVER_CONFIG_KEY);
+    if(!raw) return null;
+    return normalizeServerConfig(JSON.parse(raw));
+  }catch{
+    return null;
+  }
+}
+
+function saveServerConfig(cfg){
+  localStorage.setItem(SERVER_CONFIG_KEY, JSON.stringify(cfg));
+}
+
+function applyServerConfig(cfg){
+  const urls = buildServerUrls(cfg);
+  HTTP_BASE = urls.httpBase;
+  WS_URL = urls.wsUrl;
+}
+
+function ensureServerConfig(){
+  const cfg = loadServerConfig();
+  if(cfg){
+    applyServerConfig(cfg);
+    if(serverSetup) serverSetup.classList.add("hidden");
+    return true;
+  }
+  if(serverSetup) serverSetup.classList.remove("hidden");
+  return false;
+}
 
 function isMobileView(){
   return !!(window.matchMedia && window.matchMedia("(max-width: 1024px)").matches);
@@ -2502,11 +2599,9 @@ function handleFriendRemoved(msg){
 /* =====================================================
    页面加载：自动连接 WS
 ===================================================== */
-connectWS();
-
 document.addEventListener("visibilitychange", ()=>{
   if(document.visibilityState === "visible"){
-    if(!ws || ws.readyState !== WebSocket.OPEN){
+    if((!ws || ws.readyState !== WebSocket.OPEN) && ensureServerConfig()){
       connectWS();
     }
   }
@@ -2515,6 +2610,42 @@ document.addEventListener("visibilitychange", ()=>{
 window.addEventListener("resize", ()=>{
   setMobilePane(currentChat ? "chat" : "list");
 });
+
+if(btnSaveServerConfig){
+  btnSaveServerConfig.addEventListener("click", ()=>{
+    const cfg = normalizeServerConfig({
+      host: serverHostInput?.value,
+      httpPort: serverHttpPortInput?.value,
+      wsPort: serverWsPortInput?.value
+    });
+    if(!cfg){
+      if(serverCfgHint) serverCfgHint.textContent = "请填写正确的服务器地址和端口";
+      return;
+    }
+    saveServerConfig(cfg);
+    applyServerConfig(cfg);
+    if(serverCfgHint) serverCfgHint.textContent = "";
+    if(serverSetup) serverSetup.classList.add("hidden");
+    connectWS();
+  });
+}
+
+{
+  const cfg = loadServerConfig();
+  if(cfg){
+    if(serverHostInput) serverHostInput.value = cfg.host;
+    if(serverHttpPortInput) serverHttpPortInput.value = String(cfg.httpPort);
+    if(serverWsPortInput) serverWsPortInput.value = String(cfg.wsPort);
+  }else{
+    if(serverHostInput) serverHostInput.value = "42.51.13.120";
+    if(serverHttpPortInput) serverHttpPortInput.value = "8080";
+    if(serverWsPortInput) serverWsPortInput.value = "5050";
+  }
+}
+
+if(ensureServerConfig()){
+  connectWS();
+}
 </script>
 
 </body>

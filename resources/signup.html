@@ -151,11 +151,27 @@ const USERNAME_MAX_LEN = 64;
 const MIN_PASSWORD_LENGTH = 16;
 const PBKDF2_ITER_KEY = 200000;     // 用于加密私钥
 const PBKDF2_ITER_PWHASH = 200000;  // 用于密码哈希
-
-// 你的服务器接口（记得改）
-const API_URL = "https://42.51.13.120:8080/register";
+const SERVER_CONFIG_KEY = "sttchat_server_config_v1";
 
 const textEncoder = new TextEncoder();
+
+function getApiUrl(){
+  try{
+    const raw = localStorage.getItem(SERVER_CONFIG_KEY);
+    if(!raw) return null;
+    const cfg = JSON.parse(raw);
+    const host = String(cfg?.host || "").trim();
+    const httpPort = Number(cfg?.httpPort || 0);
+    if(!host || !Number.isInteger(httpPort) || httpPort < 1 || httpPort > 65535){
+      return null;
+    }
+    return `https://${host}:${httpPort}/register`;
+  }catch{
+    return null;
+  }
+}
+
+const API_URL = getApiUrl();
 
 /* -----------------------------------------------------
    工具函数
@@ -334,6 +350,10 @@ async function derivePasswordHash(password, salt){
 document.getElementById("registerForm").addEventListener("submit", async (e)=>{
   e.preventDefault();
   setStatus("");
+  if(!API_URL){
+    setStatus("请先在登录页配置服务器地址", true);
+    return;
+  }
 
   const username = document.getElementById("username").value.trim();
   const pw       = document.getElementById("password").value;
@@ -434,4 +454,3 @@ usernameInput.addEventListener("input", () => {
 
 </body>
 </html>
-
