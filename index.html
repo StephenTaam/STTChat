@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>STTChat</title>
+<title>STT Veil</title>
 <link rel="icon" type="image/png" href="imags/favicon.png">
 
 <style>
@@ -58,8 +58,11 @@
     width: 38px;
     height: 38px;
     border-radius: 12px;
-    background: linear-gradient(135deg, rgba(59,130,246,.9), rgba(34,197,94,.75));
-    box-shadow: 0 12px 28px rgba(59,130,246,.25);
+    background-image: url("imags/favicon.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    box-shadow: 0 8px 20px rgba(15,23,42,.16);
   }
   .brand h1{
     margin:0;
@@ -547,6 +550,8 @@
     </div>
     <div class="row" style="margin-top:10px;">
       <button class="btn primary" id="btnSaveServerConfig" type="button">保存并进入</button>
+      <button class="btn ghost" id="btnResetServerConfig" type="button">恢复默认</button>
+      <button class="btn ghost hidden" id="btnCancelServerConfig" type="button">取消</button>
       <span class="muted" id="serverCfgHint"></span>
     </div>
   </div>
@@ -560,7 +565,7 @@
       <div class="brand">
         <div class="logo"></div>
         <div>
-          <h1>STTChat</h1>
+          <h1>STT Veil</h1>
           <div class="sub">安全聊天</div>
         </div>
       </div>
@@ -606,7 +611,10 @@
             没有账号？
             <a id="linkRegister" href="#">去注册</a>
           </div>
-          <button class="btn ghost" id="btnReconnect" type="button">手动重连 WS</button>
+          <div class="row" style="gap:8px;">
+            <button class="btn ghost" id="btnServerConfigLogin" type="button">服务器设置</button>
+            <button class="btn ghost" id="btnReconnect" type="button">手动重连 WS</button>
+          </div>
         </div>
       </div>
     </div>
@@ -621,7 +629,7 @@
     <div class="brand">
       <div class="logo"></div>
       <div>
-        <h1>STTChat</h1>
+        <h1>STT Veil</h1>
         <div class="sub">你的隐私，只属于你。</div>
       </div>
     </div>
@@ -846,6 +854,9 @@
           <span class="pill" id="pillHttp">HTTP：-</span>
           <span class="pill" id="pillWs">WS：-</span>
         </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="btn ghost" id="btnServerConfigInSettings" type="button">修改服务器配置</button>
+        </div>
       </div>
     </div>
 
@@ -858,6 +869,9 @@
    配置：你需要改这里
 ===================================================== */
 const SERVER_CONFIG_KEY = "sttchat_server_config_v1";
+const DEFAULT_SERVER_HOST = "42.51.13.120";
+const DEFAULT_HTTP_PORT = 8080;
+const DEFAULT_WS_PORT = 5050;
 let HTTP_BASE = "";
 let WS_URL = "";
 const REGISTER_URL = "resources/signup.html";
@@ -949,7 +963,11 @@ const serverHostInput = document.getElementById("serverHost");
 const serverHttpPortInput = document.getElementById("serverHttpPort");
 const serverWsPortInput = document.getElementById("serverWsPort");
 const btnSaveServerConfig = document.getElementById("btnSaveServerConfig");
+const btnCancelServerConfig = document.getElementById("btnCancelServerConfig");
+const btnResetServerConfig = document.getElementById("btnResetServerConfig");
 const serverCfgHint = document.getElementById("serverCfgHint");
+const btnServerConfigLogin = document.getElementById("btnServerConfigLogin");
+const btnServerConfigInSettings = document.getElementById("btnServerConfigInSettings");
 
 function buildServerUrls(cfg){
   return {
@@ -960,8 +978,8 @@ function buildServerUrls(cfg){
 
 function normalizeServerConfig(cfg){
   const host = String(cfg?.host || "").trim();
-  const httpPort = Number(cfg?.httpPort || 8080);
-  const wsPort = Number(cfg?.wsPort || 5050);
+  const httpPort = Number(cfg?.httpPort || DEFAULT_HTTP_PORT);
+  const wsPort = Number(cfg?.wsPort || DEFAULT_WS_PORT);
   if(!host) return null;
   if(!Number.isInteger(httpPort) || httpPort < 1 || httpPort > 65535) return null;
   if(!Number.isInteger(wsPort) || wsPort < 1 || wsPort > 65535) return null;
@@ -997,6 +1015,29 @@ function ensureServerConfig(){
   }
   if(serverSetup) serverSetup.classList.remove("hidden");
   return false;
+}
+
+function fillServerConfigInputs(){
+  const cfg = loadServerConfig();
+  if(cfg){
+    if(serverHostInput) serverHostInput.value = cfg.host;
+    if(serverHttpPortInput) serverHttpPortInput.value = String(cfg.httpPort);
+    if(serverWsPortInput) serverWsPortInput.value = String(cfg.wsPort);
+  }else{
+    if(serverHostInput) serverHostInput.value = DEFAULT_SERVER_HOST;
+    if(serverHttpPortInput) serverHttpPortInput.value = String(DEFAULT_HTTP_PORT);
+    if(serverWsPortInput) serverWsPortInput.value = String(DEFAULT_WS_PORT);
+  }
+}
+
+function openServerSetup(){
+  fillServerConfigInputs();
+  const hasCfg = !!loadServerConfig();
+  if(btnCancelServerConfig){
+    btnCancelServerConfig.classList.toggle("hidden", !hasCfg);
+  }
+  if(serverCfgHint) serverCfgHint.textContent = "";
+  if(serverSetup) serverSetup.classList.remove("hidden");
 }
 
 function isMobileView(){
@@ -2626,22 +2667,46 @@ if(btnSaveServerConfig){
     applyServerConfig(cfg);
     if(serverCfgHint) serverCfgHint.textContent = "";
     if(serverSetup) serverSetup.classList.add("hidden");
+    if(drawer) drawer.classList.add("hidden");
+    if(ws){
+      try{ ws.close(4000, "server config updated"); }catch{}
+      ws = null;
+      wsReady = false;
+    }
     connectWS();
   });
 }
 
-{
-  const cfg = loadServerConfig();
-  if(cfg){
-    if(serverHostInput) serverHostInput.value = cfg.host;
-    if(serverHttpPortInput) serverHttpPortInput.value = String(cfg.httpPort);
-    if(serverWsPortInput) serverWsPortInput.value = String(cfg.wsPort);
-  }else{
-    if(serverHostInput) serverHostInput.value = "42.51.13.120";
-    if(serverHttpPortInput) serverHttpPortInput.value = "8080";
-    if(serverWsPortInput) serverWsPortInput.value = "5050";
-  }
+if(btnCancelServerConfig){
+  btnCancelServerConfig.addEventListener("click", ()=>{
+    if(loadServerConfig() && serverSetup){
+      serverSetup.classList.add("hidden");
+    }
+  });
 }
+
+if(btnResetServerConfig){
+  btnResetServerConfig.addEventListener("click", ()=>{
+    if(serverHostInput) serverHostInput.value = DEFAULT_SERVER_HOST;
+    if(serverHttpPortInput) serverHttpPortInput.value = String(DEFAULT_HTTP_PORT);
+    if(serverWsPortInput) serverWsPortInput.value = String(DEFAULT_WS_PORT);
+    if(serverCfgHint) serverCfgHint.textContent = "已恢复默认，点击“保存并进入”生效";
+  });
+}
+
+if(btnServerConfigLogin){
+  btnServerConfigLogin.addEventListener("click", ()=>{
+    openServerSetup();
+  });
+}
+
+if(btnServerConfigInSettings){
+  btnServerConfigInSettings.addEventListener("click", ()=>{
+    openServerSetup();
+  });
+}
+
+fillServerConfigInputs();
 
 if(ensureServerConfig()){
   connectWS();
