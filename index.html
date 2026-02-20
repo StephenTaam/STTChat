@@ -1197,18 +1197,42 @@ async function handleIncomingMessage(msg){
 }
 
 async function downloadEncryptedFile(payload){
-  if(payload.file_url){
-    if(payload.file_url.startsWith("/")){
-      const r = await authedFetch(payload.file_url);
-      if(!r.ok) throw new Error("download failed: http " + r.status);
-      return new Uint8Array(await r.arrayBuffer());
-    }
-    const headers = session.httpToken ? {"Authorization":"Bearer " + session.httpToken} : {};
-    const r = await fetch(payload.file_url, {headers});
-    if(!r.ok) throw new Error("download failed: http " + r.status);
-    return new Uint8Array(await r.arrayBuffer());
+  async function normalizeCipherBytes(rawBytes){
+    if(!payload.hash) return rawBytes;
+    const rawHash = await sha256Base64(rawBytes);
+    if(rawHash === payload.hash) return rawBytes;
+
+    try{
+      const text = new TextDecoder().decode(rawBytes).trim();
+
+      // JSON envelope: {"ciphertext":"base64", ...}
+      if(text.startsWith("{") && text.endsWith("}")){
+        const obj = JSON.parse(text);
+        if(typeof obj?.ciphertext === "string"){
+          const decoded = base64ToBytes(obj.ciphertext.replace(/\s+/g, ""));
+          const decodedHash = await sha256Base64(decoded);
+          if(!payload.hash || decodedHash === payload.hash) return decoded;
+        }
+      }
+
+      // Plain base64 text
+      if(/^[A-Za-z0-9+/=\r\n]+$/.test(text)){
+        const decoded = base64ToBytes(text.replace(/\s+/g, ""));
+        const decodedHash = await sha256Base64(decoded);
+        if(decodedHash === payload.hash) return decoded;
+      }
+    }catch{}
+
+    throw new Error("ciphertext hash mismatch");
   }
-  throw new Error("missing file_url");
+
+  if(!payload.file_url) throw new Error("missing file_url");
+
+  const url = payload.file_url.startsWith("/") ? (HTTP_BASE + payload.file_url) : payload.file_url;
+  const r = await fetch(url);
+  if(!r.ok) throw new Error("download failed: http " + r.status);
+  const rawBytes = new Uint8Array(await r.arrayBuffer());
+  return await normalizeCipherBytes(rawBytes);
 }
 
 function renderMessage(from,kind,data,meta,ts){
