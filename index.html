@@ -828,7 +828,6 @@ const HTTP_BASE = "https://42.51.13.120:8080"; // ← 你的 HTTP 服务 IP + �
 const WS_URL = "wss://42.51.13.120:5050";     // ← 你的 wss 地址
 const REGISTER_URL = "resources/signup.html";  // ← 你的注册页
 const FILE_UPLOAD_PATH = "/api/files/upload";
-const FILE_DOWNLOAD_PATH = "/api/files/download";
 /* =====================================================
    密码学参数
 ===================================================== */
@@ -981,17 +980,22 @@ async function sha256Base64(bytes){
 
 async function uploadEncryptedFile(ciphertextBytes, meta){
  const headers = {
-  "Content-Type": "application/octet-stream",
-  "X-File-Name": encodeURIComponent(meta.name || ""),
-  "X-File-Mime": meta.mime || "application/octet-stream",
-  "X-File-Size": String(meta.size || ciphertextBytes.byteLength),
-  "X-File-Iv": meta.iv || "",
-  "X-File-Hash": meta.sha256 || ""
+  "Content-Type": "application/json"
+ };
+ const body = {
+  to: currentChat?.username || "",
+  kind: meta.kind || "file",
+  name: meta.name || "",
+  mime: meta.mime || "application/octet-stream",
+  size: meta.size || ciphertextBytes.byteLength,
+  iv: meta.iv || "",
+  hash: meta.sha256 || "",
+  ciphertext: bufToBase64(ciphertextBytes)
  };
  const r = await authedFetch(FILE_UPLOAD_PATH, {
   method: "POST",
   headers,
-  body: ciphertextBytes
+  body: JSON.stringify(body)
  });
  const j = await readJsonSafe(r);
  if(!r.ok || !j || !j.success){
@@ -1012,10 +1016,11 @@ async function sendFileReference(kind, plainBytes, meta){
 
  const uploadRes = await uploadEncryptedFile(ciphertextBytes, {
   ...meta,
+  kind,
   iv: bufToBase64(iv),
   sha256
  });
- if(!uploadRes.file_id && !uploadRes.file_url){
+ if(!uploadRes.file_url){
   throw new Error("upload response missing file reference");
  }
 
@@ -1035,8 +1040,7 @@ async function sendFileReference(kind, plainBytes, meta){
    name: meta.name || "",
    size: meta.size || plainBytes.length || plainBytes.byteLength || 0,
    iv: bufToBase64(iv),
-   file_id: uploadRes.file_id || null,
-   file_url: uploadRes.file_url || null,
+   file_url: uploadRes.file_url,
    hash: sha256
   }
  }));
@@ -1193,11 +1197,6 @@ async function handleIncomingMessage(msg){
 }
 
 async function downloadEncryptedFile(payload){
-  if(payload.file_id){
-    const r = await authedFetch(`${FILE_DOWNLOAD_PATH}?file_id=${encodeURIComponent(payload.file_id)}`);
-    if(!r.ok) throw new Error("download failed: http " + r.status);
-    return new Uint8Array(await r.arrayBuffer());
-  }
   if(payload.file_url){
     if(payload.file_url.startsWith("/")){
       const r = await authedFetch(payload.file_url);
@@ -1209,7 +1208,7 @@ async function downloadEncryptedFile(payload){
     if(!r.ok) throw new Error("download failed: http " + r.status);
     return new Uint8Array(await r.arrayBuffer());
   }
-  throw new Error("missing file reference");
+  throw new Error("missing file_url");
 }
 
 function renderMessage(from,kind,data,meta,ts){
