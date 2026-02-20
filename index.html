@@ -2085,7 +2085,8 @@ document.getElementById("btnChangePassword").onclick = async ()=>{
 
     const j = await readJsonSafe(r);
     if(!r.ok) throw new Error("HTTP " + r.status);
-    if(j && j.success === false)
+    if(!j) throw new Error("invalid response");
+    if(j.success === false || j.success === 0)
       throw new Error(j?.error || "change password failed");
 
     toast("密码修改成功（私钥已重新加密）", "ok");
