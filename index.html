@@ -103,7 +103,7 @@
   .title h2{
     margin:0;
     font-size: 15px;
-    color: rgba(255,255,255,.92);
+    color: var(--text);
   }
   .hint{
     font-size: 12px;
@@ -559,19 +559,12 @@
       </div>
 
       <div class="card soft">
-        <div class="title">
-          <h2>开始使用</h2>
-          <span class="hint">快速入口</span>
-        </div>
-
-        <div class="muted">
-          <div class="row" style="justify-content: space-between;">
-            <div>
-              没有账号？
-              <a id="linkRegister" href="#">去注册</a>
-            </div>
-            <button class="btn ghost" id="btnReconnect" type="button">手动重连 WS</button>
+        <div class="row" style="justify-content: space-between; align-items:center;">
+          <div class="muted">
+            没有账号？
+            <a id="linkRegister" href="#">去注册</a>
           </div>
+          <button class="btn ghost" id="btnReconnect" type="button">手动重连 WS</button>
         </div>
       </div>
     </div>
@@ -587,7 +580,7 @@
       <div class="logo"></div>
       <div>
         <h1>STTChat</h1>
-        <div class="sub">Secure IM · End-to-End Encrypted</div>
+        <div class="sub">你的隐私，只属于你。</div>
       </div>
     </div>
 
