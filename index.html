@@ -742,6 +742,17 @@
           新密码
           <input id="newPw" type="password" autocomplete="new-password" placeholder="输入新密码（建议 10+ 位）">
         </label>
+        <div class="muted" style="margin-top:6px;">
+          建议至少 16 位，包含大写/小写/数字/符号。
+        </div>
+        <ul id="cpRules" style="margin:6px 0 0 18px; padding:0; font-size:12px; color:var(--muted);">
+          <li id="cp-rule-length">❌ 长度至少 16 位</li>
+          <li id="cp-rule-lower">❌ 需要小写字母</li>
+          <li id="cp-rule-upper">❌ 需要大写字母</li>
+          <li id="cp-rule-digit">❌ 需要数字</li>
+          <li id="cp-rule-symbol">❌ 需要符号</li>
+        </ul>
+        <div id="cpStrength" class="muted" style="margin-top:6px;"></div>
         <label>
           确认新密码
           <input id="newPw2" type="password" autocomplete="new-password" placeholder="再次输入新密码">
@@ -813,6 +824,7 @@ const FILE_UPLOAD_PATH = "/api/files/upload";
 ===================================================== */
 const PBKDF2_ITER_PWHASH = 200000;     // 登录 passwordHash 默认 iterations
 const PBKDF2_ITER_KEY_DEFAULT = 200000; // 若服务器没返回 iterations，就用这个
+const MIN_PASSWORD_LENGTH = 16;
 const textEncoder = new TextEncoder();
 
 /* =====================================================
@@ -888,6 +900,7 @@ const emojiPanel = document.getElementById("emojiPanel");
 const imSidebar = document.querySelector(".im-sidebar");
 const chatMain = document.getElementById("chatMain");
 const btnReconnectHome = document.getElementById("btnReconnectHome");
+const newPwInput = document.getElementById("newPw");
 
 function isMobileView(){
   return !!(window.matchMedia && window.matchMedia("(max-width: 1024px)").matches);
@@ -1102,6 +1115,13 @@ if (btnCloseChat){
   btnCloseChat.onclick = ()=>{
     clearChatSelection();
   };
+}
+
+if(newPwInput){
+  newPwInput.addEventListener("input", (e)=>{
+    updateChangePwIndicators(e.target.value || "");
+  });
+  updateChangePwIndicators(newPwInput.value || "");
 }
 
 btnFile.onclick = ()=> fileInput.click();
@@ -1349,6 +1369,41 @@ function getRandomBytes(n){
   const arr = new Uint8Array(n);
   crypto.getRandomValues(arr);
   return arr;
+}
+
+function updateChangePwIndicators(pw){
+  const ruleLength = document.getElementById("cp-rule-length");
+  const ruleLower = document.getElementById("cp-rule-lower");
+  const ruleUpper = document.getElementById("cp-rule-upper");
+  const ruleDigit = document.getElementById("cp-rule-digit");
+  const ruleSymbol = document.getElementById("cp-rule-symbol");
+  const strength = document.getElementById("cpStrength");
+
+  const hasLower = /[a-z]/.test(pw);
+  const hasUpper = /[A-Z]/.test(pw);
+  const hasDigit = /[0-9]/.test(pw);
+  const hasSymbol = /[^\w\s]/.test(pw);
+  const longEnough = pw.length >= MIN_PASSWORD_LENGTH;
+
+  if(ruleLength) ruleLength.textContent = (longEnough ? "✅" : "❌") + " 长度至少 16 位";
+  if(ruleLower) ruleLower.textContent = (hasLower ? "✅" : "❌") + " 需要小写字母";
+  if(ruleUpper) ruleUpper.textContent = (hasUpper ? "✅" : "❌") + " 需要大写字母";
+  if(ruleDigit) ruleDigit.textContent = (hasDigit ? "✅" : "❌") + " 需要数字";
+  if(ruleSymbol) ruleSymbol.textContent = (hasSymbol ? "✅" : "❌") + " 需要符号";
+
+  const score = [longEnough, hasLower, hasUpper, hasDigit, hasSymbol].filter(Boolean).length;
+  const levels = ["很弱","弱","一般","强","很强"];
+  if(strength){
+    strength.textContent = "密码强度：" + levels[Math.min(score,4)];
+  }
+}
+
+function isStrongPassword(pw){
+  return pw.length >= MIN_PASSWORD_LENGTH
+    && /[a-z]/.test(pw)
+    && /[A-Z]/.test(pw)
+    && /[0-9]/.test(pw)
+    && /[^\w\s]/.test(pw);
 }
 
 /* =====================================================
@@ -1946,6 +2001,9 @@ document.getElementById("btnChangePassword").onclick = async ()=>{
   if(newPw !== newPw2)
     return toast("两次新密码不一致", "warn");
 
+  if(!isStrongPassword(newPw))
+    return toast("新密码强度不足", "warn");
+
   if(!session.privateKeyPkcs8Bytes)
     return toast("本地没有私钥，无法改密码", "err");
 
@@ -2025,8 +2083,9 @@ document.getElementById("btnChangePassword").onclick = async ()=>{
       })
     });
 
-    const j = await r.json();
-    if(!r.ok || !j.success)
+    const j = await readJsonSafe(r);
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    if(j && j.success === false)
       throw new Error(j?.error || "change password failed");
 
     toast("密码修改成功（私钥已重新加密）", "ok");
