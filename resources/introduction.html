@@ -1,1 +1,96 @@
-i
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>STTChat · 介绍</title>
+  <link rel="icon" type="image/png" href="../imags/favicon.png" />
+  <style>
+    :root{
+      --bg:#f5f7fb;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --line:#e2e8f0;
+      --primary:#2563eb;
+      --primary-2:#1d4ed8;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(900px 360px at 10% -5%, rgba(37,99,235,.14), transparent 62%),
+        radial-gradient(700px 300px at 100% 0%, rgba(14,165,233,.1), transparent 65%),
+        var(--bg);
+    }
+    .wrap{max-width:1020px;margin:0 auto;padding:28px 16px 40px}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:44px;height:44px;border-radius:14px;background:url("../imags/favicon.png") center/cover no-repeat;
+      box-shadow:0 8px 24px rgba(37,99,235,.22);
+    }
+    .name{font-size:30px;font-weight:800;letter-spacing:.4px;margin:0}
+    .btn{
+      appearance:none;border:none;border-radius:12px;padding:10px 16px;font-weight:700;cursor:pointer;
+      text-decoration:none;display:inline-flex;align-items:center;justify-content:center;
+    }
+    .btn-primary{background:var(--primary);color:#fff}
+    .btn-primary:hover{background:var(--primary-2)}
+    .hero{
+      background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px;
+      box-shadow:0 14px 36px rgba(15,23,42,.06);
+    }
+    .slogan{font-size:36px;line-height:1.2;font-weight:850;margin:0 0 12px}
+    .desc{margin:0;color:var(--muted);font-size:17px}
+    .grid{margin-top:16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .item{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:14px}
+    .item h3{margin:0 0 8px;font-size:17px}
+    .item p{margin:0;color:var(--muted);font-size:14px;line-height:1.55}
+    .actions{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
+    .btn-ghost{background:#fff;color:#0f172a;border:1px solid var(--line)}
+    @media (max-width: 860px){
+      .slogan{font-size:29px}
+      .grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <div class="logo"></div>
+        <h1 class="name">STTChat</h1>
+      </div>
+      <a class="btn btn-primary" href="../index.html">返回登录</a>
+    </div>
+
+    <section class="hero">
+      <h2 class="slogan">你的隐私，只属于你。</h2>
+      <p class="desc">STTChat 是面向个人与小团队的安全即时通讯工具。保持简洁、专注沟通、默认保护隐私。</p>
+
+      <div class="grid">
+        <article class="item">
+          <h3>快速连接</h3>
+          <p>登录后即可与好友发起会话，支持文本、图片与文件消息，界面保持清爽直观。</p>
+        </article>
+        <article class="item">
+          <h3>多端可用</h3>
+          <p>桌面与手机浏览器均可访问。移动端采用列表/会话分屏切换，更适合单手使用。</p>
+        </article>
+        <article class="item">
+          <h3>安全优先</h3>
+          <p>消息内容加密后再传输，服务端只负责转发与存储密文，不接触明文内容。</p>
+        </article>
+      </div>
+
+      <div class="actions">
+        <a class="btn btn-primary" href="../index.html">立即登录</a>
+        <a class="btn btn-ghost" href="signup.html">注册账号</a>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
