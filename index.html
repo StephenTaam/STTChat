@@ -437,6 +437,15 @@
     background: rgba(42,124,247,.10);
     border-left: 3px solid rgba(42,124,247,.9);
   }
+  .unread-dot{
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ef4444;
+    display: inline-block;
+    margin-right: 8px;
+    flex: 0 0 auto;
+  }
 
   .im-main{
     flex:1;
@@ -914,6 +923,8 @@ function escapeHtml(s){
 let friendRequests = []; // [{username, display_name}]
 const sessionKeys = new Map(); // peer -> CryptoKey
 const pendingSendByTs = new Map(); // client ts -> pending meta
+const unreadDotMap = new Map(); // peer -> boolean
+const latestTsByPeer = new Map(); // peer -> number
 
 let friends = []; // [{username, display_name, avatar_url}]
 let currentChat = null;
@@ -1047,6 +1058,54 @@ function isMobileView(){
   return !!(window.matchMedia && window.matchMedia("(max-width: 1024px)").matches);
 }
 
+function peerKey(name){
+  return String(name || "").toLowerCase();
+}
+
+function isChatOpenFor(peer){
+  if(!currentChat || peerKey(currentChat.username) !== peerKey(peer)) return false;
+  if(document.visibilityState !== "visible") return false;
+  if(isMobileView()){
+    return !!(chatMain && !chatMain.classList.contains("hidden"));
+  }
+  return true;
+}
+
+function markUnread(peer, hasUnread){
+  const key = peerKey(peer);
+  if(!key) return;
+  unreadDotMap.set(key, !!hasUnread);
+}
+
+function clearUnread(peer){
+  markUnread(peer, false);
+}
+
+function getLatestTs(peer){
+  return latestTsByPeer.get(peerKey(peer)) || 0;
+}
+
+function updateLatestTs(peer, ts){
+  const key = peerKey(peer);
+  const n = Number(ts || 0);
+  if(!key || !Number.isFinite(n) || n <= 0) return;
+  const prev = latestTsByPeer.get(key) || 0;
+  if(n > prev) latestTsByPeer.set(key, n);
+}
+
+function sendReadReceipt(peer, ts){
+  const lastReadTs = Number(ts || 0);
+  if(!peer || !lastReadTs) return;
+  if(!ws || ws.readyState !== WebSocket.OPEN || !session.wsAuthed) return;
+  try{
+    ws.send(JSON.stringify({
+      type: "chat_read",
+      peer,
+      last_read_ts: lastReadTs
+    }));
+  }catch{}
+}
+
 function setMobilePane(mode){
   if(!isMobileView()) {
     if(imSidebar) imSidebar.classList.remove("hidden");
@@ -1090,7 +1149,7 @@ async function sendEncrypted(kind,data,meta={}){
 
  // local echo so sender sees the message even if server does not echo back
  try{
-  renderMessage(session.username, kind, data, meta, clientTs);
+  renderMessage(session.username, kind, data, meta, clientTs, currentChat?.username);
  }catch{}
 }
 
@@ -1183,7 +1242,7 @@ async function sendFileReference(kind, plainBytes, meta){
   mime: meta.mime,
   name: meta.name,
   size: meta.size
- }, clientTs);
+ }, clientTs, currentChat?.username);
 }
 
 
@@ -1308,7 +1367,8 @@ function handleChatSendAck(msg){
 
 async function handleIncomingMessage(msg){
   console.log("[history] incoming", msg);
-  const keyOwner = (msg.from === session.username) ? (msg.peer || currentChat?.username) : msg.from;
+  const peer = msg.peer || ((msg.from === session.username) ? currentChat?.username : msg.from);
+  const keyOwner = (msg.from === session.username) ? peer : msg.from;
   if(!keyOwner) throw new Error("missing key owner");
   const key = await resolveSessionKey(keyOwner);
   console.log("[history] key resolved", keyOwner);
@@ -1332,7 +1392,8 @@ async function handleIncomingMessage(msg){
     msg.payload.kind,
     new Uint8Array(pt),
     msg.payload,
-    msg.ts
+    msg.ts,
+    peer
   );
 
 }
@@ -1376,8 +1437,9 @@ async function downloadEncryptedFile(payload){
   return await normalizeCipherBytes(rawBytes);
 }
 
-function renderMessage(from,kind,data,meta,ts){
- console.log("[render] message", { from, kind, size: data?.length || 0, ts });
+function renderMessage(from,kind,data,meta,ts,peer){
+ console.log("[render] message", { from, kind, size: data?.length || 0, ts, peer });
+ updateLatestTs(peer || (from === session.username ? currentChat?.username : from), ts);
  const div=document.createElement("div");
  div.className="msg "+(from===session.username?"me":"peer");
 
@@ -1427,6 +1489,7 @@ async function loadHistory(peer){
     const bt = Number((b && b.payload && b.payload.ts) ? b.payload.ts : b?.ts || 0);
     return at - bt;
   });
+  latestTsByPeer.set(peerKey(peer), 0);
   console.log("[history] list length", list.length);
   for(const m of list){
     const payload = (m && m.payload && m.payload.payload) ? m.payload.payload : m.payload;
@@ -1441,6 +1504,10 @@ async function loadHistory(peer){
       peer
     });
   }
+  const lastTs = getLatestTs(peer);
+  clearUnread(peer);
+  renderFriendList();
+  sendReadReceipt(peer, lastTs);
   console.log("[history] load done");
  }catch(err){
   console.error("[history] load exception", err);
@@ -1750,12 +1817,27 @@ function connectWS(){
         const key = (msg.client_ts !== undefined && msg.client_ts !== null)
       ? String(msg.client_ts)
       : (msg.ts !== undefined && msg.ts !== null ? String(msg.ts) : null);
-    if (key && pendingSendByTs.has(key)) {
-      pendingSendByTs.delete(key);
+        if (key && pendingSendByTs.has(key)) {
+          pendingSendByTs.delete(key);
+        }
+        return;
+      }
+      const peer = msg.from;
+      if(!peer){
+        return;
+      }
+
+      if(isChatOpenFor(peer)){
+        await handleIncomingMessage(msg);
+        const lastTs = getLatestTs(peer) || msg.ts;
+        clearUnread(peer);
+        renderFriendList();
+        sendReadReceipt(peer, lastTs);
+      }else{
+        markUnread(peer, true);
+        renderFriendList();
+      }
       return;
-    }
-  }
-  handleIncomingMessage(msg);
 }
 if (msg.type === "friend_request") {
   toast("收到好友请求", "warn");
@@ -1917,6 +1999,8 @@ async function handleLoginResult(msg){
 function backToLogin(){
   $("viewHome").classList.add("hidden");
   $("viewLogin").classList.remove("hidden");
+  unreadDotMap.clear();
+  latestTsByPeer.clear();
   clearChatSelection();
   updateHomeBadges();
   updateConnPills();
@@ -2352,6 +2436,22 @@ async function loadFriends(){
   friends = j.friends || [];
   friendRequests = j.requests || [];
 
+  const alivePeers = new Set();
+  for(const f of friends){
+    const key = peerKey(f.username);
+    if(!key) continue;
+    alivePeers.add(key);
+    const localUnread = unreadDotMap.get(key) === true;
+    const serverUnread = !!f.has_unread;
+    unreadDotMap.set(key, localUnread || serverUnread);
+  }
+  for(const key of Array.from(unreadDotMap.keys())){
+    if(!alivePeers.has(key)) unreadDotMap.delete(key);
+  }
+  for(const key of Array.from(latestTsByPeer.keys())){
+    if(!alivePeers.has(key)) latestTsByPeer.delete(key);
+  }
+
   // pre-derive session keys for friends with public_key.spki
   for (const f of friends) {
     if (!f.public_key || !f.public_key.spki) continue;
@@ -2376,20 +2476,27 @@ function renderFriendList(){
   for(const f of friends){
     const div = document.createElement("div");
     div.className = "im-item";
+    div.dataset.username = f.username || "";
+    if(currentChat && peerKey(currentChat.username) === peerKey(f.username)){
+      div.classList.add("active");
+    }
 
     const avatar = HTTP_BASE + (f.avatar_url || "/resources/avatars/default.png");
+    const hasUnread = unreadDotMap.get(peerKey(f.username)) === true;
+    const unreadDot = hasUnread ? `<span class="unread-dot" title="未读消息"></span>` : "";
 
     div.innerHTML = `
       <div class="row" style="gap:10px;">
         <img src="${avatar}" style="width:36px;height:36px;border-radius:50%">
         <div style="flex:1">${escapeHtml(f.display_name || f.username)}</div>
+        ${unreadDot}
         <button class="btn ghost btn-sm">⋮</button>
       </div>
     `;
 
     div.onclick = (e)=>{
       if(e.target.tagName === "BUTTON") return;
-      selectFriend(f, e);
+      selectFriend(f);
     };
 
     // 删除好友
@@ -2427,11 +2534,11 @@ async function deleteFriend(username){
 
 
 
-function selectFriend(f,e){
+function selectFriend(f){
  currentChat=f;
 
- document.querySelectorAll(".im-item").forEach(x=>x.classList.remove("active"));
- e.currentTarget.classList.add("active");
+ clearUnread(f.username);
+ renderFriendList();
 
  chatMessages.innerHTML="";
  if(chatMessages) chatMessages.classList.remove("hidden");
@@ -2613,6 +2720,7 @@ async function handleFriendAccepted(msg){
       public_key: msg.public_key
     });
   }
+  markUnread(username, false);
   if(msg.public_key && msg.public_key.spki){
     try{
       const key = await deriveSessionKey(msg.public_key.spki);
@@ -2631,6 +2739,8 @@ function handleFriendRemoved(msg){
   friends = friends.filter(f => String(f.username || "").toLowerCase() !== uname);
   friendRequests = friendRequests.filter(r => String(r.username || "").toLowerCase() !== uname);
   sessionKeys.delete(username);
+  unreadDotMap.delete(uname);
+  latestTsByPeer.delete(uname);
   if(currentChat && String(currentChat.username || "").toLowerCase() === uname){
     clearChatSelection();
   }
