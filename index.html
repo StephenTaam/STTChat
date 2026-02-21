@@ -1062,6 +1062,14 @@ function peerKey(name){
   return String(name || "").toLowerCase();
 }
 
+function normalizeTsMs(ts){
+  const n = Number(ts || 0);
+  if(!Number.isFinite(n) || n <= 0) return 0;
+  // 10-digit seconds -> milliseconds
+  if(n < 100000000000) return Math.floor(n * 1000);
+  return Math.floor(n);
+}
+
 function isChatOpenFor(peer){
   return !!(currentChat && peerKey(currentChat.username) === peerKey(peer));
 }
@@ -1082,14 +1090,14 @@ function getLatestTs(peer){
 
 function updateLatestTs(peer, ts){
   const key = peerKey(peer);
-  const n = Number(ts || 0);
+  const n = normalizeTsMs(ts);
   if(!key || !Number.isFinite(n) || n <= 0) return;
   const prev = latestTsByPeer.get(key) || 0;
   if(n > prev) latestTsByPeer.set(key, n);
 }
 
 function sendReadReceipt(peer, ts){
-  const lastReadTs = Number(ts || 0);
+  const lastReadTs = normalizeTsMs(ts);
   if(!peer || !lastReadTs) return;
   if(!ws || ws.readyState !== WebSocket.OPEN || !session.wsAuthed) return;
   try{
@@ -1439,7 +1447,7 @@ function renderMessage(from,kind,data,meta,ts,peer){
  div.className="msg "+(from===session.username?"me":"peer");
 
  const time = (ts !== undefined && ts !== null)
-   ? new Date(Number(ts))
+   ? new Date(normalizeTsMs(ts))
    : null;
 
  if(kind==="text"){
@@ -1480,15 +1488,15 @@ async function loadHistory(peer){
   }
   const list = Array.isArray(j.messages) ? j.messages : (Array.isArray(j.message) ? j.message : []);
   list.sort((a,b)=>{
-    const at = Number((a && a.payload && a.payload.ts) ? a.payload.ts : a?.ts || 0);
-    const bt = Number((b && b.payload && b.payload.ts) ? b.payload.ts : b?.ts || 0);
+    const at = normalizeTsMs((a && a.payload && a.payload.ts) ? a.payload.ts : a?.ts || 0);
+    const bt = normalizeTsMs((b && b.payload && b.payload.ts) ? b.payload.ts : b?.ts || 0);
     return at - bt;
   });
   latestTsByPeer.set(peerKey(peer), 0);
   console.log("[history] list length", list.length);
   for(const m of list){
     const payload = (m && m.payload && m.payload.payload) ? m.payload.payload : m.payload;
-    const ts = (m && m.payload && m.payload.ts) ? m.payload.ts : m.ts;
+    const ts = normalizeTsMs((m && m.payload && m.payload.ts) ? m.payload.ts : m.ts);
     const from = (m && m.payload && m.payload.from) ? m.payload.from : m.from;
     console.log("[history] normalized", { from, ts, hasPayload: !!payload });
     if(!from || !payload) continue;
@@ -1824,7 +1832,7 @@ function connectWS(){
 
       if(isChatOpenFor(peer)){
         await handleIncomingMessage(msg);
-        const lastTs = getLatestTs(peer) || msg.ts;
+        const lastTs = getLatestTs(peer) || normalizeTsMs(msg.ts);
         clearUnread(peer);
         renderFriendList();
         sendReadReceipt(peer, lastTs);
