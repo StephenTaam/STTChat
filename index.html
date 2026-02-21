@@ -1063,12 +1063,7 @@ function peerKey(name){
 }
 
 function isChatOpenFor(peer){
-  if(!currentChat || peerKey(currentChat.username) !== peerKey(peer)) return false;
-  if(document.visibilityState !== "visible") return false;
-  if(isMobileView()){
-    return !!(chatMain && !chatMain.classList.contains("hidden"));
-  }
-  return true;
+  return !!(currentChat && peerKey(currentChat.username) === peerKey(peer));
 }
 
 function markUnread(peer, hasUnread){
